@@ -1,9 +1,17 @@
+pub mod primitives;
+
 use palette::{IntoColor, rgb::Rgb};
 
 pub trait Shader {
     type Output: IntoColor;
 
-    pub fn shade(&self, pos: u32) -> Self::Output;
+    pub fn shade(&self, frag: Fragment) -> Self::Output;
+}
+
+#[derive(Clone, Copy, Debug)]
+pub struct Fragment {
+    pub pos: usize,
+    pub time: f32,
 }
 
 pub struct Channel {
