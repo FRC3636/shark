@@ -29,7 +29,8 @@ pub struct Mix<S: Shader, E: Shader> {
     end: E,
     factor: f32,
 }
-impl Shader for Interpolate<S, E> {
+
+impl<S: Shader, E: Shader> Shader for Mix<S, E> {
     type Output = S::Output;
 
     fn shade(&self, frag: Fragment) -> Self::Output {
@@ -38,5 +39,23 @@ impl Shader for Interpolate<S, E> {
         let end = self.end.shade(frag);
 
         start.mix(&end, self.factor)
+    }
+}
+
+pub struct Fade<S: Shader, E: Shader> {
+    start: S,
+    end: E,
+
+    interpolator: Fn(f32) -> f32,
+}
+impl<S: Shader, E: Shader> Shader for Fade<S, E> {
+    type Output = S::Output;
+
+    fn shade(&self, frag: Fragment) -> Self::Output {
+        let factor = (self.interpolator)(frag.pos);
+        let start = self.start.shade(frag);
+        let end = self.end.shade(frag);
+
+        start.mix(&end, factor)
     }
 }
