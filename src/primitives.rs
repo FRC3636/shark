@@ -1,4 +1,4 @@
-use palette::Oklab;
+use palette::{Oklab, IntoColor, Mix};
 
 use crate::{Fragment, Shader};
 
@@ -8,7 +8,7 @@ impl Shader for Off {
 
     fn shade(&self, _frag: Fragment) -> Self::Output {
         // Full black
-        Oklab::new(0, 0, 0)
+        Oklab::new(0.0, 0.0, 0.0)
     }
 }
 
@@ -24,38 +24,54 @@ impl Shader for Color {
     }
 }
 
-pub struct Mix<S: Shader, E: Shader> {
+pub struct Interpolate<S: Shader, E: Shader> {
     start: S,
     end: E,
-    factor: f32,
+    interpolator: Box<dyn Fn(Fragment) -> f32>,
 }
-
-impl<S: Shader, E: Shader> Shader for Mix<S, E> {
-    type Output = S::Output;
+impl<S: Shader, E: Shader> Shader for Interpolate<S, E> {
+    type Output = Oklab;
 
     fn shade(&self, frag: Fragment) -> Self::Output {
-        let t = self.interpolator(frag.pos);
-        let start = self.start.shade(frag);
-        let end = self.end.shade(frag);
+        let factor = (self.interpolator)(frag);
 
-        start.mix(&end, self.factor)
+        let start = self.start.shade(frag).into_color();
+        let end = self.end.shade(frag).into_color();
+
+        start.mix(end, factor)
     }
 }
 
-pub struct Fade<S: Shader, E: Shader> {
+pub fn mix<S: Shader, E: Shader>(
     start: S,
     end: E,
-
-    interpolator: Fn(f32) -> f32,
+    factor: f32,
+) -> Interpolate<S, E> {
+    Interpolate {
+        start,
+        end,
+        interpolator: Box::new(move |_| factor),
+    }
 }
-impl<S: Shader, E: Shader> Shader for Fade<S, E> {
-    type Output = S::Output;
 
-    fn shade(&self, frag: Fragment) -> Self::Output {
-        let factor = (self.interpolator)(frag.pos);
-        let start = self.start.shade(frag);
-        let end = self.end.shade(frag);
+pub fn position_gradient<S: Shader, E: Shader, I: Fn(usize) -> f32 + 'static>(start: S, end: E, interpolator: I) -> Interpolate<S, E> {
+    Interpolate {
+        start,
+        end,
+        interpolator: Box::new(move |frag| {
+            let factor = (interpolator)(frag.pos);
+            factor
+        }),
+    }
+}
 
-        start.mix(&end, factor)
+pub fn time_gradient<S: Shader, E: Shader, I: Fn(f32) -> f32 + 'static>(start: S, end: E, interpolator: I) -> Interpolate<S, E> {
+    Interpolate {
+        start,
+        end,
+        interpolator: Box::new(move |frag| {
+            let factor = (interpolator)(frag.time);
+            factor
+        }),
     }
 }

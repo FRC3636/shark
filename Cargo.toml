@@ -7,4 +7,4 @@ edition = "2021"
 
 [dependencies]
 palette = "0.7.3"
-rs_ws281x = "0.4.4"
+# rs_ws281x = "0.4.4"
