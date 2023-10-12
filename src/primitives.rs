@@ -12,6 +12,10 @@ impl Shader for Off {
     }
 }
 
+pub fn off() -> Off {
+    Off
+}
+
 pub struct Color {
     color: Oklab,
 }
@@ -22,6 +26,10 @@ impl Shader for Color {
     fn shade(&self, _frag: Fragment) -> Self::Output {
         self.color
     }
+}
+
+pub fn color(color: impl IntoColor<Oklab>) -> Color {
+    Color { color: color.into_color() }
 }
 
 pub struct Interpolate<S: Shader, E: Shader> {
@@ -73,5 +81,31 @@ pub fn time_gradient<S: Shader, E: Shader, I: Fn(f32) -> f32 + 'static>(start: S
             let factor = (interpolator)(frag.time);
             factor
         }),
+    }
+}
+
+pub struct Stride<S: Shader, T: Shader> {
+    shaders: (S, T),
+    stride: usize,
+}
+
+impl<S: Shader, T: Shader> Shader for Stride<S, T> {
+    type Output = Oklab;
+
+    fn shade(&self, frag: Fragment) -> Self::Output {
+        let first_color = frag.pos / self.stride % 2 == 0;
+
+        if first_color {
+            self.shaders.0.shade(frag).into_color()
+        } else {
+            self.shaders.1.shade(frag).into_color()
+        }
+    }
+}
+
+pub fn stride<S: Shader, T: Shader>(first: S, second: T, stride: usize) -> Stride<S, T> {
+    Stride {
+        shaders: (first, second),
+        stride,
     }
 }

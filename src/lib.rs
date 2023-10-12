@@ -1,7 +1,7 @@
 pub mod primitives;
 
 use palette::{IntoColor, Oklab};
-use primitives::{Interpolate, mix};
+use primitives::{Interpolate, mix, Stride, stride};
 
 pub trait Shader {
     type Output: IntoColor<Oklab>;
@@ -16,11 +16,26 @@ pub struct Fragment {
 }
 
 pub trait ShaderExt: Shader + Sized {
-    fn mix<S: Shader, >(self, other: S, factor: f32) -> Interpolate<Self, S> {
+    fn mix<S: Shader>(self, other: S, factor: f32) -> Interpolate<Self, S> {
         mix(self, other, factor)
+    }
+
+    fn stride<S: Shader>(self, other: S, stride: usize) -> Stride<Self, S> {
+        crate::stride(self, other, stride)
     }
 }
 impl<T> ShaderExt for T where T: Shader {}
+
+#[cfg(test)]
+mod tests {
+    use crate::ShaderExt;
+    pub use crate::primitives::*;
+
+    #[test]
+    fn shader_ext() {
+        let shader = color(palette::Oklab::new(0.800, 0.159, -0.193)).stride(off(), 2);
+    }
+}
 
 // TODO
 // pub struct Channel {
