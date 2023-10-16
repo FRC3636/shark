@@ -1,4 +1,4 @@
-use palette::{Oklab, IntoColor, Mix};
+use palette::{IntoColor, Mix, Oklab};
 
 use crate::{Fragment, Shader};
 
@@ -29,7 +29,9 @@ impl Shader for Color {
 }
 
 pub fn color(color: impl IntoColor<Oklab>) -> Color {
-    Color { color: color.into_color() }
+    Color {
+        color: color.into_color(),
+    }
 }
 
 pub struct Interpolate<S: Shader, E: Shader> {
@@ -50,11 +52,7 @@ impl<S: Shader, E: Shader> Shader for Interpolate<S, E> {
     }
 }
 
-pub fn mix<S: Shader, E: Shader>(
-    start: S,
-    end: E,
-    factor: f32,
-) -> Interpolate<S, E> {
+pub fn mix<S: Shader, E: Shader>(start: S, end: E, factor: f32) -> Interpolate<S, E> {
     Interpolate {
         start,
         end,
@@ -62,7 +60,11 @@ pub fn mix<S: Shader, E: Shader>(
     }
 }
 
-pub fn position_gradient<S: Shader, E: Shader, I: Fn(usize) -> f32 + 'static>(start: S, end: E, interpolator: I) -> Interpolate<S, E> {
+pub fn position_gradient<S: Shader, E: Shader, I: Fn(usize) -> f32 + 'static>(
+    start: S,
+    end: E,
+    interpolator: I,
+) -> Interpolate<S, E> {
     Interpolate {
         start,
         end,
@@ -73,7 +75,11 @@ pub fn position_gradient<S: Shader, E: Shader, I: Fn(usize) -> f32 + 'static>(st
     }
 }
 
-pub fn time_gradient<S: Shader, E: Shader, I: Fn(f32) -> f32 + 'static>(start: S, end: E, interpolator: I) -> Interpolate<S, E> {
+pub fn time_gradient<S: Shader, E: Shader, I: Fn(f32) -> f32 + 'static>(
+    start: S,
+    end: E,
+    interpolator: I,
+) -> Interpolate<S, E> {
     Interpolate {
         start,
         end,

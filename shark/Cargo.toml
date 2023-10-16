@@ -1,0 +1,10 @@
+[package]
+name = "shark"
+version = "0.1.0"
+edition = "2021"
+
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+palette = "0.7.3"
+# rs_ws281x = "0.4.4"
