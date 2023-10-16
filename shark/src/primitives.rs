@@ -1,4 +1,5 @@
-use palette::{IntoColor, Mix, Oklab};
+use palette::{IntoColor, Mix, Okhsl, Oklab, OklabHue};
+use rand::Rng;
 
 use crate::{Fragment, Shader};
 
@@ -113,5 +114,20 @@ pub fn stride<S: Shader, T: Shader>(first: S, second: T, stride: usize) -> Strid
     Stride {
         shaders: (first, second),
         stride,
+    }
+}
+
+pub struct Random;
+impl Shader for Random {
+    type Output = Okhsl;
+
+    fn shade(&self, _frag: Fragment) -> Self::Output {
+        let mut rng = rand::thread_rng();
+        // Okhsl because it's the easiest to generate random colors with
+        Okhsl::new(
+            OklabHue::new(rng.gen_range(0.0..360.0)),
+            rng.gen_range(0.0..1.0),
+            rng.gen_range(0.0..1.0),
+        )
     }
 }

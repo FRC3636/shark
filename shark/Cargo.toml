@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 palette = "0.7.3"
+rand = { version = "0.8.5", features = ["small_rng"] }
 # rs_ws281x = "0.4.4"
