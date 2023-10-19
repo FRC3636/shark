@@ -1,5 +1,5 @@
-use palette::{IntoColor, Mix, Okhsl, Oklab, OklabHue};
 use num::ToPrimitive;
+use palette::{IntoColor, Mix, Okhsl, Oklab, OklabHue};
 use rand::Rng;
 
 use crate::{Fragment, Shader};
@@ -143,7 +143,11 @@ impl<S: Shader, M: ToPrimitive> Shader for ModPosition<S, M> {
 
     fn shade(&self, frag: Fragment) -> Self::Output {
         let frag = Fragment {
-            pos: frag.pos % self.modulo.to_usize().unwrap_or_else(|| 0),
+            pos: frag.pos
+                % self
+                    .modulo
+                    .to_usize()
+                    .expect("Could not convert modulo type to usize."),
             ..frag
         };
         self.shader.shade(frag)
@@ -151,10 +155,7 @@ impl<S: Shader, M: ToPrimitive> Shader for ModPosition<S, M> {
 }
 
 pub fn mod_position<S: Shader, M: ToPrimitive>(shader: S, modulo: M) -> ModPosition<S, M> {
-    ModPosition {
-        shader,
-        modulo,
-    }
+    ModPosition { shader, modulo }
 }
 
 pub struct ModTime<S: Shader, M: ToPrimitive> {
@@ -167,7 +168,11 @@ impl<S: Shader, M: ToPrimitive> Shader for ModTime<S, M> {
 
     fn shade(&self, frag: Fragment) -> Self::Output {
         let frag = Fragment {
-            time: frag.time % self.modulo.to_f32().unwrap_or_else(|| f32::NAN),
+            time: frag.time
+                % self
+                    .modulo
+                    .to_f32()
+                    .expect("Could not convert modulo type to float."),
             ..frag
         };
         self.shader.shade(frag)
@@ -175,8 +180,5 @@ impl<S: Shader, M: ToPrimitive> Shader for ModTime<S, M> {
 }
 
 pub fn mod_time<S: Shader, M: ToPrimitive>(shader: S, modulo: M) -> ModTime<S, M> {
-    ModTime {
-        shader,
-        modulo,
-    }
+    ModTime { shader, modulo }
 }
