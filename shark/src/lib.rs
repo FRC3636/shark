@@ -1,7 +1,7 @@
 pub mod primitives;
 
 use palette::{IntoColor, Oklab};
-use primitives::{mix, stride, Interpolate, Stride};
+use primitives::{mix, mod_position, mod_time, stride, Interpolate, ModPosition, ModTime, Stride};
 
 pub trait Shader {
     type Output: IntoColor<Oklab>;
@@ -22,6 +22,14 @@ pub trait ShaderExt: Shader + Sized {
 
     fn stride<S: Shader>(self, other: S, stride: usize) -> Stride<Self, S> {
         crate::stride(self, other, stride)
+    }
+
+    fn mod_position<M: num::ToPrimitive>(self, modulo: M) -> ModPosition<Self, M> {
+        mod_position(self, modulo)
+    }
+
+    fn mod_time<M: num::ToPrimitive>(self, modulo: M) -> ModTime<Self, M> {
+        mod_time(self, modulo)
     }
 }
 impl<T> ShaderExt for T where T: Shader {}
