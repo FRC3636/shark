@@ -12,3 +12,6 @@ target/
 # Added by cargo
 
 /target
+
+# Direnv
+.direnv
