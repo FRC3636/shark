@@ -1,7 +1,7 @@
 pub mod primitives;
 
 use palette::{IntoColor, Oklab};
-use primitives::{mix, mod_position, mod_time, stride, Interpolate, ModPosition, ModTime, Stride};
+use primitives::{mix, mod_position, mod_time, stride, rotate, Interpolate, ModPosition, ModTime, Stride, Rotate};
 
 pub trait Shader {
     type Output: IntoColor<Oklab>;
@@ -30,6 +30,10 @@ pub trait ShaderExt: Shader + Sized {
 
     fn mod_time<M: num::ToPrimitive>(self, modulo: M) -> ModTime<Self, M> {
         mod_time(self, modulo)
+    }
+
+    fn rotate(self, angle: f32) -> Rotate<Self> {
+        rotate(self, angle)
     }
 }
 impl<T> ShaderExt for T where T: Shader {}

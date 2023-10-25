@@ -1,5 +1,5 @@
 use num::ToPrimitive;
-use palette::{IntoColor, Mix, Okhsl, Oklab, OklabHue};
+use palette::{IntoColor, Mix, Okhsl, Oklab, OklabHue, FromColor, ShiftHue};
 use rand::Rng;
 
 use crate::{Fragment, Shader};
@@ -59,6 +59,27 @@ pub fn mix<S: Shader, E: Shader>(start: S, end: E, factor: f32) -> Interpolate<S
         start,
         end,
         interpolator: Box::new(move |_| factor),
+    }
+}
+
+pub struct Rotate<S: Shader> {
+    shader: S,
+    angle: f32,
+}
+impl<S: Shader> Shader for Rotate<S> {
+    type Output = Oklab;
+
+    fn shade(&self, frag: Fragment) -> Self::Output {
+        let col = self.shader.shade(frag);
+        let col: Okhsl = Okhsl::from_color(col.into_color());
+        col.shift_hue(self.angle).into_color()
+    }
+}
+
+pub fn rotate<S: Shader>(shader: S, angle: f32) -> Rotate<S> {
+    Rotate {
+        shader,
+        angle: angle.to_radians(),
     }
 }
 
