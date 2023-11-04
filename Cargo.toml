@@ -2,5 +2,6 @@
 resolver = "2"
 members = [
     "shark",
+    "shark-visualizer",
     "shark-ws281x",
 ]
