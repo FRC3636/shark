@@ -1,6 +1,6 @@
 use iced::{
     executor,
-    widget::{button, row},
+    widget::{button, row, text, image},
     Application, Command, Settings, Theme,
 };
 
@@ -15,7 +15,9 @@ enum Message {
     Step,
 }
 
-struct Visualizer {}
+struct Visualizer {
+    paused: bool,
+}
 impl Application for Visualizer {
     type Executor = executor::Default;
 
@@ -26,7 +28,7 @@ impl Application for Visualizer {
     type Flags = ();
 
     fn new(_flags: Self::Flags) -> (Self, iced::Command<Self::Message>) {
-        (Self {}, iced::Command::none())
+        (Self { paused: true }, iced::Command::none())
     }
 
     fn title(&self) -> String {
@@ -42,6 +44,7 @@ impl Application for Visualizer {
             button("Play").on_press(Message::Play),
             button("Pause").on_press(Message::Pause),
             button("Step").on_press(Message::Step),
+            // image(
         ].into()
     }
 }

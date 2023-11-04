@@ -32,12 +32,25 @@
                 [
                   pkg-config
                   fontconfig
-                  libxkbcommon
-                  wayland
                   vulkan-loader
+                  wayland
+                  libxkbcommon
                   libGL
+                  xorg.libXcursor
+                  xorg.libXrandr
+                  xorg.libXi
                   xorg.libX11
                 ] ++ drv.buildInputs;
+
+              LD_LIBRARY_PATH = with pkgs; pkgs.lib.makeLibraryPath [
+                libGL
+                wayland
+                libxkbcommon
+                xorg.libXcursor
+                xorg.libXrandr
+                xorg.libXi
+                xorg.libX11
+              ];
             });
           default = shark-visualizer;
         };
@@ -56,9 +69,30 @@
             clang
             llvmPackages_16.libllvm
             llvmPackages_16.stdenv
+
+            fontconfig
+            vulkan-loader
+            wayland
+            libxkbcommon
+            libGL
+            xorg.libXcursor
+            xorg.libXrandr
+            xorg.libXi
+            xorg.libX11
+
+            cargo2nix.packages.${system}.cargo2nix
           ];
 
           LIBCLANG_PATH = with pkgs; pkgs.lib.makeLibraryPath [ libclang ];
+          LD_LIBRARY_PATH = with pkgs; pkgs.lib.makeLibraryPath [
+            libGL
+            wayland
+            libxkbcommon
+            xorg.libXcursor
+            xorg.libXrandr
+            xorg.libXi
+            xorg.libX11
+          ];
         };
       }));
 }
