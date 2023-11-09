@@ -9,7 +9,7 @@ use iced::{
     Application, Color, Command, Length, Point, Rectangle, Renderer, Settings, Size, Theme,
 };
 use palette::{FromColor, IntoColor, Srgb};
-use shark::{primitives::*, Fragment, Shader};
+use shark::{primitives::*, shader::*};
 
 #[derive(Parser)]
 struct Args {
@@ -26,11 +26,7 @@ struct VisualizerSettings<S: Shader> {
 }
 
 fn main() {
-    let shader = position_gradient(
-        Random,
-        color(Srgb::new(0.0, 0.0, 0.0)),
-        |i| i as f32 / 20.0,
-    );
+    let shader = position_gradient(random(), color(Srgb::new(0.0, 0.0, 0.0)), |i| i as f32 / 20.0);
     let settings = VisualizerSettings {
         args: Args::parse(),
         shader,
@@ -46,13 +42,13 @@ enum Message {
     Tick,
 }
 
-struct Visualizer<S: Shader> {
+struct Visualizer<S: Shader<Fragment = FragOne>> {
     paused: bool,
     visualization: Visualization,
     tps: f64,
     shader: S,
 }
-impl<S: Shader> Application for Visualizer<S> {
+impl<S: Shader<Fragment = FragOne>> Application for Visualizer<S> {
     type Executor = executor::Default;
 
     type Message = Message;
@@ -88,7 +84,7 @@ impl<S: Shader> Application for Visualizer<S> {
                 for (index, color) in self.visualization.colors.iter_mut().enumerate() {
                     let new_color = self
                         .shader
-                        .shade(Fragment {
+                        .shade(FragOne {
                             pos: index,
                             time: 0.0,
                         })
@@ -96,13 +92,13 @@ impl<S: Shader> Application for Visualizer<S> {
                     *color = Srgb::from_color(new_color);
                 }
                 self.visualization.cache.clear();
-            },
+            }
             Message::Tick => {
-                if !self.paused{
+                if !self.paused {
                     for (index, color) in self.visualization.colors.iter_mut().enumerate() {
                         let new_color = self
                             .shader
-                            .shade(Fragment {
+                            .shade(FragOne {
                                 pos: index,
                                 time: 0.0,
                             })
@@ -130,9 +126,7 @@ impl<S: Shader> Application for Visualizer<S> {
     }
 
     fn subscription(&self) -> iced::Subscription<Self::Message> {
-        iced::time::every(std::time::Duration::from_secs_f64(1.0 / self.tps)).map(|_| {
-            Message::Tick
-        })
+        iced::time::every(std::time::Duration::from_secs_f64(1.0 / self.tps)).map(|_| Message::Tick)
     }
 }
 
