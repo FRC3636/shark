@@ -4,5 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
-iced = { version = "0.10.0", features = ["image"] }
+clap = { version = "4.4.7", features = ["derive"] }
+iced = { version = "0.10.0", features = ["image", "canvas", "tokio"] }
 image = "0.24.7"
+palette = "0.7.3"
+shark = { path = "../shark" }

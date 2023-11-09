@@ -1,5 +1,5 @@
 use num::ToPrimitive;
-use palette::{IntoColor, Mix, Okhsl, Oklab, OklabHue, FromColor, ShiftHue};
+use palette::{IntoColor, Mix, Okhsl, Oklab, OklabHue, FromColor, ShiftHue, Srgb};
 use rand::Rng;
 
 use crate::{Fragment, Shader};

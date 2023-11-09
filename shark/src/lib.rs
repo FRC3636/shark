@@ -1,7 +1,9 @@
 pub mod primitives;
 
 use palette::{IntoColor, Oklab};
-use primitives::{mix, mod_position, mod_time, stride, rotate, Interpolate, ModPosition, ModTime, Stride, Rotate};
+use primitives::{
+    mix, mod_position, mod_time, rotate, stride, Interpolate, ModPosition, ModTime, Rotate, Stride,
+};
 
 pub trait Shader {
     type Output: IntoColor<Oklab>;
