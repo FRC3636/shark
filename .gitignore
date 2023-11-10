@@ -19,3 +19,8 @@ target/
 # Nix
 /result
 /result-bin
+
+# Flamegraph
+flamegraph.svg
+perf.data
+perf.data.old

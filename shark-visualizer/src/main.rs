@@ -20,13 +20,13 @@ struct Args {
     tps: f64,
 }
 
-struct VisualizerSettings<S: Shader> {
+struct VisualizerSettings<S: Shader<FragOne>> {
     args: Args,
     shader: S,
 }
 
 fn main() {
-    let shader = position_gradient(random(), color(Srgb::new(0.0, 0.0, 0.0)), |i| i as f32 / 20.0);
+    let shader = checkerboard(position_gradient(random(), off(), |i| i as f32 / 20.0), color(Srgb::new(1.0, 0.9, 0.5)), 2);
     let settings = VisualizerSettings {
         args: Args::parse(),
         shader,
@@ -42,13 +42,13 @@ enum Message {
     Tick,
 }
 
-struct Visualizer<S: Shader<Fragment = FragOne>> {
+struct Visualizer<S: Shader<FragOne>> {
     paused: bool,
     visualization: Visualization,
     tps: f64,
     shader: S,
 }
-impl<S: Shader<Fragment = FragOne>> Application for Visualizer<S> {
+impl<S: Shader<FragOne>> Application for Visualizer<S> {
     type Executor = executor::Default;
 
     type Message = Message;

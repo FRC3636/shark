@@ -10,3 +10,9 @@ num = "0.4.1"
 palette = "0.7.3"
 rand = { version = "0.8.5", features = ["small_rng"] }
 # rs_ws281x = "0.4.4"
+
+[features]
+default = []
+
+unstable = ["fn_trait_v2"]
+fn_trait_v2 = []
