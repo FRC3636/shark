@@ -14,30 +14,35 @@
             llvmPackages_16.libllvm
             llvmPackages_16.stdenv
 
-            fontconfig
-            vulkan-loader
-            wayland
-            libxkbcommon
-            libGL
-            xorg.libXcursor
-            xorg.libXrandr
-            xorg.libXi
-            xorg.libX11
+            # fontconfig
 
-            alsa-lib
             udev
+            alsa-lib
+            vulkan-loader
+
+            xorg.libX11
+            xorg.libXcursor
+            xorg.libXi
+            xorg.libXrandr
+
+            libxkbcommon
+            wayland
           ];
 
           LIBCLANG_PATH = with pkgs; pkgs.lib.makeLibraryPath [ libclang ];
           LD_LIBRARY_PATH = with pkgs;
             pkgs.lib.makeLibraryPath [
-              libGL
-              wayland
-              libxkbcommon
-              xorg.libXcursor
-              xorg.libXrandr
-              xorg.libXi
+              udev
+              alsa-lib
+              vulkan-loader
+
               xorg.libX11
+              xorg.libXcursor
+              xorg.libXi
+              xorg.libXrandr
+
+              libxkbcommon
+              wayland
             ];
         };
       }));
