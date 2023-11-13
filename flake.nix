@@ -13,8 +13,10 @@
         };
 
         rustPkgs = pkgs.rustBuilder.makePackageSet {
-          rustVersion = "1.71.0";
           packageFun = import ./Cargo.nix;
+
+          rustChannel = "nightly";
+          extraRustComponents = [ "rustc-dev" ];
         };
       in rec {
         packages = rec {
@@ -42,15 +44,16 @@
                   xorg.libX11
                 ] ++ drv.buildInputs;
 
-              LD_LIBRARY_PATH = with pkgs; pkgs.lib.makeLibraryPath [
-                libGL
-                wayland
-                libxkbcommon
-                xorg.libXcursor
-                xorg.libXrandr
-                xorg.libXi
-                xorg.libX11
-              ];
+              LD_LIBRARY_PATH = with pkgs;
+                pkgs.lib.makeLibraryPath [
+                  libGL
+                  wayland
+                  libxkbcommon
+                  xorg.libXcursor
+                  xorg.libXrandr
+                  xorg.libXi
+                  xorg.libX11
+                ];
             });
           default = shark-visualizer;
         };
@@ -80,19 +83,22 @@
             xorg.libXi
             xorg.libX11
 
+            alsa-lib
+            udev
             cargo2nix.packages.${system}.cargo2nix
           ];
 
           LIBCLANG_PATH = with pkgs; pkgs.lib.makeLibraryPath [ libclang ];
-          LD_LIBRARY_PATH = with pkgs; pkgs.lib.makeLibraryPath [
-            libGL
-            wayland
-            libxkbcommon
-            xorg.libXcursor
-            xorg.libXrandr
-            xorg.libXi
-            xorg.libX11
-          ];
+          LD_LIBRARY_PATH = with pkgs;
+            pkgs.lib.makeLibraryPath [
+              libGL
+              wayland
+              libxkbcommon
+              xorg.libXcursor
+              xorg.libXrandr
+              xorg.libXi
+              xorg.libX11
+            ];
         };
       }));
 }
