@@ -27,6 +27,11 @@
 
             libxkbcommon
             wayland
+
+            glib
+            atk
+            gtk3
+            cairo
           ];
 
           LIBCLANG_PATH = with pkgs; pkgs.lib.makeLibraryPath [ libclang ];
@@ -43,6 +48,11 @@
 
               libxkbcommon
               wayland
+
+              glib
+              atk
+              gtk3
+              cairo
             ];
         };
       }));
