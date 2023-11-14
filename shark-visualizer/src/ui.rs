@@ -6,9 +6,7 @@ use crate::PlayBackState;
 pub struct UiPlugin;
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        app
-            .add_systems(Startup, initialize_ui)
-            .add_systems(
+        app.add_systems(Startup, initialize_ui).add_systems(
             Update,
             (
                 playback_button_changed_state,
@@ -118,7 +116,7 @@ impl Default for PlaybackButtonBundle {
     fn default() -> Self {
         Self {
             action: PlaybackButtonAction::Play,
-            ..default()
+            button: default(),
         }
     }
 }
@@ -139,7 +137,7 @@ impl Default for CompileButtonBundle {
     fn default() -> Self {
         Self {
             action: CompileButtonAction::Compile,
-            ..default()
+            button: default(),
         }
     }
 }
@@ -150,16 +148,22 @@ fn initialize_ui(mut commands: Commands) {
             style: Style {
                 width: Val::Percent(100.0),
                 height: Val::Percent(100.0),
-                row_gap: Val::Px(500.0),
                 flex_direction: FlexDirection::Column,
-                align_content: AlignContent::SpaceBetween,
+                column_gap: Val::Px(50.0),
                 ..default()
             },
             ..default()
         })
         .with_children(|parent| {
             parent
-                .spawn(NodeBundle { ..default() })
+                .spawn(NodeBundle {
+                    style: Style {
+                        flex_direction: FlexDirection::Row,
+                        row_gap: Val::Px(50.0),
+                        ..default()
+                    },
+                    ..default()
+                })
                 .with_children(|parent| {
                     parent
                         .spawn(PlaybackButtonBundle {
@@ -223,47 +227,56 @@ fn initialize_ui(mut commands: Commands) {
                         });
                 });
 
-            parent.spawn(NodeBundle::default()).with_children(|parent| {
-                parent
-                    .spawn(CompileButtonBundle {
-                        action: CompileButtonAction::SetFilePath,
+            parent
+                .spawn(NodeBundle {
+                    style: Style {
+                        flex_direction: FlexDirection::Row,
+                        row_gap: Val::Px(50.0),
                         ..default()
-                    })
-                    .with_children(|parent| {
-                        parent.spawn(
-                            TextBundle::from_section(
-                                "SetPath",
-                                TextStyle {
-                                    font_size: 30.0,
+                    },
+                    ..default()
+                })
+                .with_children(|parent| {
+                    parent
+                        .spawn(CompileButtonBundle {
+                            action: CompileButtonAction::SetFilePath,
+                            ..default()
+                        })
+                        .with_children(|parent| {
+                            parent.spawn(
+                                TextBundle::from_section(
+                                    "SetPath",
+                                    TextStyle {
+                                        font_size: 30.0,
+                                        ..default()
+                                    },
+                                )
+                                .with_style(Style {
+                                    padding: UiRect::all(Val::Px(15.0)),
                                     ..default()
-                                },
-                            )
-                            .with_style(Style {
-                                padding: UiRect::all(Val::Px(15.0)),
-                                ..default()
-                            }),
-                        );
-                    });
-                parent
-                    .spawn(CompileButtonBundle {
-                        action: CompileButtonAction::Compile,
-                        ..default()
-                    })
-                    .with_children(|parent| {
-                        parent.spawn(
-                            TextBundle::from_section(
-                                "Compile",
-                                TextStyle {
-                                    font_size: 30.0,
+                                }),
+                            );
+                        });
+                    parent
+                        .spawn(CompileButtonBundle {
+                            action: CompileButtonAction::Compile,
+                            ..default()
+                        })
+                        .with_children(|parent| {
+                            parent.spawn(
+                                TextBundle::from_section(
+                                    "Compile",
+                                    TextStyle {
+                                        font_size: 30.0,
+                                        ..default()
+                                    },
+                                )
+                                .with_style(Style {
+                                    padding: UiRect::all(Val::Px(15.0)),
                                     ..default()
-                                },
-                            )
-                            .with_style(Style {
-                                padding: UiRect::all(Val::Px(15.0)),
-                                ..default()
-                            }),
-                        );
-                    });
-            });
+                                }),
+                            );
+                        });
+                });
         });
 }
