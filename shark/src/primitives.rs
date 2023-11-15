@@ -60,7 +60,11 @@ impl<S: Shader<F>, E: Shader<F>, F: Fragment> Shader<F> for Interpolate<S, E, F>
     }
 }
 
-pub fn mix<F: Fragment, S: Shader<F>, E: Shader<F>>(start: S, end: E, factor: f32) -> Interpolate<S, E, F> {
+pub fn mix<F: Fragment, S: Shader<F>, E: Shader<F>>(
+    start: S,
+    end: E,
+    factor: f32,
+) -> Interpolate<S, E, F> {
     Interpolate {
         start,
         end,
@@ -128,9 +132,7 @@ pub struct Checkerboard<F: Fragment, S: Shader<F>, T: Shader<F>> {
     stride: usize,
 }
 
-impl<F: Fragment, S: Shader<F>, T: Shader<F>> Shader<F>
-    for Checkerboard<F, S, T>
-{
+impl<F: Fragment, S: Shader<F>, T: Shader<F>> Shader<F> for Checkerboard<F, S, T> {
     type Output = Oklab;
 
     fn shade(&self, frag: F) -> Self::Output {
@@ -249,7 +251,11 @@ pub fn mod_position<F: Fragment, S: Shader<F>, M: ToPrimitive>(
     shader: S,
     modulo: M,
 ) -> ModPosition<S, M, F> {
-    ModPosition { _marker: std::marker::PhantomData, shader, modulo }
+    ModPosition {
+        _marker: std::marker::PhantomData,
+        shader,
+        modulo,
+    }
 }
 
 pub struct ModTime<F: Fragment, S: Shader<F>, M: ToPrimitive> {
@@ -274,8 +280,15 @@ impl<F: Fragment, S: Shader<F>, M: ToPrimitive> Shader<F> for ModTime<F, S, M> {
     }
 }
 
-pub fn mod_time<F: Fragment, S: Shader<F>, M: ToPrimitive>(shader: S, modulo: M) -> ModTime<F, S, M> {
-    ModTime { _marker: std::marker::PhantomData,shader, modulo }
+pub fn mod_time<F: Fragment, S: Shader<F>, M: ToPrimitive>(
+    shader: S,
+    modulo: M,
+) -> ModTime<F, S, M> {
+    ModTime {
+        _marker: std::marker::PhantomData,
+        shader,
+        modulo,
+    }
 }
 
 pub struct Extrude<F: Fragment, S: Shader<F>> {
@@ -308,5 +321,8 @@ impl<S: Shader<FragTwo>> Shader<FragTwo> for Extrude<FragTwo, S> {
 }
 
 pub fn extrude<F: Fragment, S: Shader<F>>(shader: S) -> Extrude<F, S> {
-    Extrude { _marker: std::marker::PhantomData, shader }
+    Extrude {
+        _marker: std::marker::PhantomData,
+        shader,
+    }
 }

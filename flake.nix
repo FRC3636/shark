@@ -54,6 +54,7 @@
               gtk3
               cairo
             ];
+          WGPU_BACKEND="vulkan";
         };
       }));
 }

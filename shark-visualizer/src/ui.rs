@@ -1,19 +1,45 @@
 use bevy::prelude::*;
 use rfd::FileDialog;
 
+use crate::shader_compiler::{CompileShaderEvent, ShaderCompilerState};
 use crate::PlayBackState;
 
 pub struct UiPlugin;
 impl Plugin for UiPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, initialize_ui).add_systems(
-            Update,
-            (
-                playback_button_changed_state,
-                compile_button_changed_state,
-                theme_buttons,
-            ),
-        );
+        app.add_systems(Startup, initialize_ui)
+            .add_systems(
+                Update,
+                (
+                    playback_button_changed_state,
+                    compile_button_changed_state,
+                    theme_buttons,
+                    handle_error,
+                ),
+            )
+            .add_event::<ErrorMessageEvent>();
+    }
+}
+
+#[derive(Component)]
+struct ErrorMessageText;
+
+#[derive(Event)]
+pub enum ErrorMessageEvent {
+    ShaderPathNotSet,
+}
+
+fn handle_error(
+    mut err_ev: EventReader<ErrorMessageEvent>,
+    mut query: Query<&mut Text, With<ErrorMessageText>>,
+) {
+    for ev in err_ev.read() {
+        let mut text = query.single_mut();
+        match ev {
+            ErrorMessageEvent::ShaderPathNotSet => {
+                text.sections[0].value = "Shader path not set".to_string();
+            }
+        }
     }
 }
 
@@ -56,20 +82,22 @@ fn playback_button_changed_state(
 
 fn compile_button_changed_state(
     mut query: Query<(&Interaction, &CompileButtonAction), (Changed<Interaction>, With<Button>)>,
+    mut ev_writer: EventWriter<CompileShaderEvent>,
+    mut compiler_state: ResMut<ShaderCompilerState>,
 ) {
     for (interaction, action) in query.iter_mut() {
         if let Interaction::Pressed = *interaction {
             match action {
                 CompileButtonAction::SetFilePath => {
-                    info!("Set file path");
                     let path = FileDialog::new()
                         .set_directory("~")
                         .add_filter("Rust", &["rs"])
                         .pick_file();
-                    info!("Path {:?}", path);
+
+                    compiler_state.shader_path = path;
                 }
                 CompileButtonAction::Compile => {
-                    todo!();
+                    ev_writer.send(CompileShaderEvent);
                 }
             }
         }
@@ -278,5 +306,20 @@ fn initialize_ui(mut commands: Commands) {
                             );
                         });
                 });
+
+            parent.spawn((
+                TextBundle {
+                    text: Text::from_section(
+                        "",
+                        TextStyle {
+                            font_size: 20.0,
+                            color: Color::RED,
+                            ..default()
+                        },
+                    ),
+                    ..default()
+                },
+                ErrorMessageText,
+            ));
         });
 }

@@ -1,13 +1,14 @@
 #![feature(rustc_private)]
-pub mod ui;
-pub mod visualization;
+mod shader_compiler;
+mod ui;
+mod visualization;
 
 use bevy::prelude::*;
 
 extern crate rustc_driver;
 extern crate rustc_interface;
 
-pub use rustc_interface::{ run_compiler, Config };
+pub use rustc_interface::{run_compiler, Config};
 
 #[derive(Resource, Debug)]
 struct PlayBackState {
@@ -16,7 +17,12 @@ struct PlayBackState {
 
 fn main() {
     App::new()
-        .add_plugins((DefaultPlugins, ui::UiPlugin, visualization::VisualizationPlugin))
+        .add_plugins((
+            DefaultPlugins,
+            ui::UiPlugin,
+            visualization::VisualizationPlugin,
+            shader_compiler::ShaderCompilerPlugin,
+        ))
         .add_systems(Startup, camera_setup)
         .insert_resource(PlayBackState { paused: true })
         .run();

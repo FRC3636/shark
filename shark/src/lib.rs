@@ -5,7 +5,10 @@ pub mod shader;
 
 #[cfg(test)]
 mod tests {
-    use crate::{shader::{ShaderExt, Shader, FragOne}, primitives::{color, off}};
+    use crate::{
+        primitives::{color, off},
+        shader::{FragOne, Shader, ShaderExt},
+    };
 
     #[test]
     fn shader_ext() {
