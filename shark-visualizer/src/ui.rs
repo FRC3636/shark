@@ -26,7 +26,11 @@ struct ErrorMessageText;
 
 #[derive(Event)]
 pub enum ErrorMessageEvent {
-    ShaderPathNotSet,
+    ManifestPathNotSet,
+    CargoError(String),
+    TooManyLibs,
+    NoLibs,
+    NoShaderExport,
 }
 
 fn handle_error(
@@ -36,8 +40,22 @@ fn handle_error(
     for ev in err_ev.read() {
         let mut text = query.single_mut();
         match ev {
-            ErrorMessageEvent::ShaderPathNotSet => {
-                text.sections[0].value = "Shader path not set".to_string();
+            ErrorMessageEvent::ManifestPathNotSet => {
+                text.sections[0].value = "Manifest folder not set".to_string();
+            }
+            ErrorMessageEvent::CargoError(err) => {
+                text.sections[0].value = err.clone();
+            }
+            ErrorMessageEvent::TooManyLibs => {
+                text.sections[0].value = "Crate output more than on library".to_string();
+            }
+            ErrorMessageEvent::NoLibs => {
+                text.sections[0].value = "Crate output no libraries".to_string();
+            }
+            ErrorMessageEvent::NoShaderExport => {
+                text.sections[0].value =
+                    "Library has no shader_export function, or it has the incorrect header"
+                        .to_string();
             }
         }
     }
@@ -75,8 +93,6 @@ fn playback_button_changed_state(
                 _ => {}
             }
         }
-
-        info!("Playback state {:?}", state);
     }
 }
 
@@ -91,10 +107,10 @@ fn compile_button_changed_state(
                 CompileButtonAction::SetFilePath => {
                     let path = FileDialog::new()
                         .set_directory("~")
-                        .add_filter("Rust", &["rs"])
-                        .pick_file();
+                        .set_title("Select manifest root")
+                        .pick_folder();
 
-                    compiler_state.shader_path = path;
+                    compiler_state.manifest_folder = path;
                 }
                 CompileButtonAction::Compile => {
                     ev_writer.send(CompileShaderEvent);

@@ -48,6 +48,32 @@ impl<F: Fragment, O: IntoColor<Oklab>> Shader<F> for dyn Fn(F) -> O {
     }
 }
 
+// #[repr(C)]
+// pub struct VtableShader<F: Fragment + 'static, O: IntoColor<Oklab> + 'static> {
+//     _marker: std::marker::PhantomData<O>,
+//     shader: &'static dyn Fn(F) -> O,
+// }
+// impl<F: Fragment, O: IntoColor<Oklab>> Shader<F> for VtableShader<F, O> {
+//     type Output = O;
+
+//     fn shade(&self, frag: F) -> Self::Output {
+//         (self.shader)(frag)
+//     }
+// }
+
+// pub fn create_vtable_shader<
+//     F: Fragment,
+//     O: IntoColor<Oklab>,
+//     S: Shader<F, Output = O>,
+// >(
+//     shader: &'static mut S,
+// ) -> VtableShader<F, O> {
+//     VtableShader {
+//         _marker: std::marker::PhantomData,
+//         shader: Box::leak(Box::new(|f| shader.shade(f))),
+//     }
+// }
+
 // #[cfg(feature = "fn_trait_v2")]
 // impl<I: Fragment, O: IntoColor<Oklab>, F: Fn<(I,)>> Shader<I> for F<Output = O> {
 

@@ -1,4 +1,7 @@
-use palette::{IntoColor, Srgb};
+extern crate shark;
+
+use shark::palette::{IntoColor, Srgb};
+use shark::shader::{VtableShader, FragThree};
 use shark::{
     primitives::*,
     shader::{FragOne, Fragment, Shader, ShaderExt},

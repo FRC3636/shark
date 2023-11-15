@@ -1,14 +1,8 @@
-#![feature(rustc_private)]
 mod shader_compiler;
 mod ui;
 mod visualization;
 
 use bevy::prelude::*;
-
-extern crate rustc_driver;
-extern crate rustc_interface;
-
-pub use rustc_interface::{run_compiler, Config};
 
 #[derive(Resource, Debug)]
 struct PlayBackState {
