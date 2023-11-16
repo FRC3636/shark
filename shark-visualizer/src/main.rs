@@ -1,6 +1,7 @@
 mod shader_compiler;
 mod ui;
 mod visualization;
+mod user_config;
 
 use bevy::prelude::*;
 
@@ -16,6 +17,7 @@ fn main() {
             ui::UiPlugin,
             visualization::VisualizationPlugin,
             shader_compiler::ShaderCompilerPlugin,
+            user_config::UserConfigPlugin,
         ))
         .add_systems(Startup, camera_setup)
         .insert_resource(PlayBackState { paused: true })

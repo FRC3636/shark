@@ -12,6 +12,8 @@ shark = { path = "../shark" }
 rfd = "0.12.1"
 cargo = "0.74.0"
 libloading = "0.8.1"
+toml = "0.8.8"
+serde = "1.0.192"
 
 [package.metadata.rust-analyzer]
 rustc_private = true

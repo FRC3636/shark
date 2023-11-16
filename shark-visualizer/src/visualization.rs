@@ -1,32 +1,17 @@
 pub use bevy::prelude::*;
 
+use crate::user_config::{DespawnLedsEvent, SpawnLedsEvent, UserConfigState};
+
 pub struct VisualizationPlugin;
 
 impl Plugin for VisualizationPlugin {
     fn build(&self, app: &mut App) {
-        app.add_systems(Startup, initialize_visualization);
+        app.add_systems(Startup, initialize_visualization)
+            .add_systems(Update, (spawn_leds, despawn_leds));
     }
 }
 
-fn initialize_visualization(
-    mut commands: Commands,
-    mut meshes: ResMut<Assets<Mesh>>,
-    mut materials: ResMut<Assets<StandardMaterial>>,
-) {
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(shape::Circle::new(4.0).into()),
-        material: materials.add(Color::WHITE.into()),
-        transform: Transform::from_rotation(Quat::from_rotation_x(-std::f32::consts::FRAC_PI_2)),
-        ..default()
-    });
-
-    commands.spawn(PbrBundle {
-        mesh: meshes.add(Mesh::from(shape::Cube { size: 1.0 })),
-        material: materials.add(Color::rgb_u8(124, 144, 255).into()),
-        transform: Transform::from_xyz(0.0, 0.5, 0.0),
-        ..default()
-    });
-
+fn initialize_visualization(mut commands: Commands) {
     commands.spawn(PointLightBundle {
         point_light: PointLight {
             intensity: 1500.0,
@@ -36,4 +21,53 @@ fn initialize_visualization(
         transform: Transform::from_xyz(4.0, 8.0, 4.0),
         ..default()
     });
+}
+
+#[derive(Component)]
+pub struct Led;
+
+fn spawn_leds(
+    mut commands: Commands,
+    mut spawn_ev: EventReader<SpawnLedsEvent>,
+    user_config: Res<UserConfigState>,
+    mut meshes: ResMut<Assets<Mesh>>,
+) {
+    for _ in spawn_ev.read() {
+        for led in user_config
+            .config
+            .as_ref()
+            .unwrap()
+            .visualization
+            .leds
+            .leds
+            .iter()
+        {
+            commands.spawn((
+                PbrBundle {
+                    mesh: meshes.add(
+                        shape::UVSphere {
+                            radius: 0.1,
+                            ..default()
+                        }
+                        .into(),
+                    ),
+                    transform: Transform::from_xyz(led.x, led.y, led.z),
+                    ..default()
+                },
+                Led,
+            ));
+        }
+    }
+}
+
+fn despawn_leds(
+    mut commands: Commands,
+    mut despawn_ev: EventReader<DespawnLedsEvent>,
+    query: Query<Entity, With<Led>>,
+) {
+    for _ in despawn_ev.read() {
+        for entity in query.iter() {
+            commands.entity(entity).despawn();
+        }
+    }
 }

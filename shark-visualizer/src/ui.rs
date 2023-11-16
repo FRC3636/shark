@@ -1,3 +1,5 @@
+use std::path::PathBuf;
+
 use bevy::prelude::*;
 use rfd::FileDialog;
 
@@ -17,31 +19,44 @@ impl Plugin for UiPlugin {
                     handle_error,
                 ),
             )
-            .add_event::<ErrorMessageEvent>();
+            .add_event::<ErrorMessageEvent>()
+            .add_event::<ManifestPathSetEvent>();
     }
 }
 
 #[derive(Component)]
-struct ErrorMessageText;
+struct ErrorTimer {
+    timer: Timer,
+}
 
 #[derive(Event)]
 pub enum ErrorMessageEvent {
     ManifestPathNotSet,
+    NotAWorkspace,
     CargoError(String),
     TooManyLibs,
     NoLibs,
     NoShaderExport,
+    NoSharkToml,
+    CouldntReadSharkToml,
+    InvalidSharkToml,
 }
 
 fn handle_error(
     mut err_ev: EventReader<ErrorMessageEvent>,
-    mut query: Query<&mut Text, With<ErrorMessageText>>,
+    mut query: Query<(&mut Text, &mut ErrorTimer)>,
+    time: Res<Time>,
 ) {
+    let (mut text, mut err_timer) = query.single_mut();
     for ev in err_ev.read() {
-        let mut text = query.single_mut();
+        err_timer.timer.reset();
+        err_timer.timer.unpause();
         match ev {
             ErrorMessageEvent::ManifestPathNotSet => {
                 text.sections[0].value = "Manifest folder not set".to_string();
+            }
+            ErrorMessageEvent::NotAWorkspace => {
+                text.sections[0].value = "Specified folder doesn't contain 'Cargo.toml'".to_string();
             }
             ErrorMessageEvent::CargoError(err) => {
                 text.sections[0].value = err.clone();
@@ -57,7 +72,21 @@ fn handle_error(
                     "Library has no shader_export function, or it has the incorrect header"
                         .to_string();
             }
+            ErrorMessageEvent::NoSharkToml => {
+                text.sections[0].value = "No shark.toml in the given path".to_string();
+            }
+            ErrorMessageEvent::CouldntReadSharkToml => {
+                text.sections[0].value = "Couldn't read shark.toml in the given path".to_string();
+            }
+            ErrorMessageEvent::InvalidSharkToml => {
+                text.sections[0].value = "Couldn't parse shark.toml, is it valid?".to_string();
+            }
         }
+    }
+
+    err_timer.timer.tick(time.delta());
+    if err_timer.timer.just_finished() {
+        text.sections[0].value = "".to_string();
     }
 }
 
@@ -96,9 +125,14 @@ fn playback_button_changed_state(
     }
 }
 
+#[derive(Event)]
+pub struct ManifestPathSetEvent(pub PathBuf);
+
 fn compile_button_changed_state(
     mut query: Query<(&Interaction, &CompileButtonAction), (Changed<Interaction>, With<Button>)>,
-    mut ev_writer: EventWriter<CompileShaderEvent>,
+    mut comp_writer: EventWriter<CompileShaderEvent>,
+    mut manifest_writer: EventWriter<ManifestPathSetEvent>,
+    mut err_writer: EventWriter<ErrorMessageEvent>,
     mut compiler_state: ResMut<ShaderCompilerState>,
 ) {
     for (interaction, action) in query.iter_mut() {
@@ -109,11 +143,21 @@ fn compile_button_changed_state(
                         .set_directory("~")
                         .set_title("Select manifest root")
                         .pick_folder();
-
+                    if let Some(path) = path.clone() {
+                        if !path.join("Cargo.toml").exists() {
+                            err_writer.send(ErrorMessageEvent::NotAWorkspace);
+                            continue;
+                        }
+                        if !path.join("shark.toml").exists() {
+                            err_writer.send(ErrorMessageEvent::NoSharkToml);
+                            continue;
+                        }
+                        manifest_writer.send(ManifestPathSetEvent(path))
+                    }
                     compiler_state.manifest_folder = path;
                 }
                 CompileButtonAction::Compile => {
-                    ev_writer.send(CompileShaderEvent);
+                    comp_writer.send(CompileShaderEvent);
                 }
             }
         }
@@ -335,7 +379,9 @@ fn initialize_ui(mut commands: Commands) {
                     ),
                     ..default()
                 },
-                ErrorMessageText,
+                ErrorTimer {
+                    timer: Timer::from_seconds(3.0, TimerMode::Repeating)
+                },
             ));
         });
 }
