@@ -1,4 +1,7 @@
-use std::{path::{PathBuf, Path}, sync::Mutex};
+use std::{
+    path::{Path, PathBuf},
+    sync::Mutex,
+};
 
 use bevy::prelude::*;
 use palette::LinSrgb;

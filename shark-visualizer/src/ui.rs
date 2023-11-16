@@ -4,6 +4,7 @@ use bevy::prelude::*;
 use rfd::FileDialog;
 
 use crate::shader_compiler::{CompileShaderEvent, ShaderCompilerState};
+use crate::visualization::StepEvent;
 use crate::PlayBackState;
 
 pub struct UiPlugin;
@@ -114,6 +115,7 @@ fn theme_buttons(
 fn playback_button_changed_state(
     mut query: Query<(&Interaction, &PlaybackButtonAction), (Changed<Interaction>, With<Button>)>,
     mut state: ResMut<PlayBackState>,
+    mut step_writer: EventWriter<StepEvent>,
 ) {
     for (interaction, action) in query.iter_mut() {
         if let Interaction::Pressed = *interaction {
@@ -124,7 +126,9 @@ fn playback_button_changed_state(
                 PlaybackButtonAction::Pause => {
                     state.paused = true;
                 }
-                _ => {}
+                PlaybackButtonAction::Step => {
+                    step_writer.send(StepEvent);
+                }
             }
         }
     }

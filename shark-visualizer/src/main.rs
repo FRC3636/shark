@@ -8,6 +8,7 @@ use bevy::prelude::*;
 #[derive(Resource, Debug)]
 struct PlayBackState {
     paused: bool,
+    fps: f32,
 }
 
 fn main() {
@@ -20,7 +21,10 @@ fn main() {
             user_config::UserConfigPlugin,
         ))
         .add_systems(Startup, camera_setup)
-        .insert_resource(PlayBackState { paused: true })
+        .insert_resource(PlayBackState {
+            paused: true,
+            fps: 20.0,
+        })
         .run();
 }
 

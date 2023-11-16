@@ -3,15 +3,31 @@ pub use bevy::{prelude::*, window::CursorGrabMode};
 use palette::LinSrgb;
 use shark::shader::FragThree;
 
-use crate::user_config::{DespawnLedsEvent, SpawnLedsEvent, UserConfigState};
+use crate::{
+    user_config::{DespawnLedsEvent, SpawnLedsEvent, UserConfigState},
+    PlayBackState,
+};
 
 pub struct VisualizationPlugin;
 
 impl Plugin for VisualizationPlugin {
     fn build(&self, app: &mut App) {
-        app.insert_resource(VisualizationState { shader: None })
-            .add_systems(Startup, initialize_visualization)
-            .add_systems(Update, (rotate_visualization, spawn_leds, despawn_leds));
+        app.insert_resource(VisualizationState {
+            shader: None,
+            fps_timer: Timer::from_seconds(0.0, TimerMode::Once),
+        })
+        .add_systems(Startup, initialize_visualization)
+        .add_systems(
+            Update,
+            (
+                rotate_visualization,
+                spawn_leds,
+                despawn_leds,
+                update_leds.run_if(|pb: Res<PlayBackState>| !pb.paused),
+                step_visualization,
+            ),
+        )
+        .add_event::<StepEvent>();
     }
 }
 
@@ -19,6 +35,7 @@ impl Plugin for VisualizationPlugin {
 pub struct VisualizationState {
     pub shader:
         Option<Box<dyn shark::shader::Shader<FragThree, Output = LinSrgb<f64>> + Send + Sync>>,
+    pub fps_timer: Timer,
 }
 
 #[derive(Component)]
@@ -70,6 +87,7 @@ fn spawn_leds(
     mut spawn_ev: EventReader<SpawnLedsEvent>,
     user_config: Res<UserConfigState>,
     mut meshes: ResMut<Assets<Mesh>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
     query: Query<Entity, With<LedRoot>>,
 ) {
     let led_root = query.single();
@@ -95,6 +113,7 @@ fn spawn_leds(
                             .into(),
                         ),
                         transform: Transform::from_xyz(led.x, led.y, led.z),
+                        material: materials.add(Color::BLACK.into()),
                         ..default()
                     },
                     Led,
@@ -112,6 +131,60 @@ fn despawn_leds(
     for _ in despawn_ev.read() {
         for entity in query.iter() {
             commands.entity(entity).despawn();
+        }
+    }
+}
+
+fn update_leds(
+    mut state: ResMut<VisualizationState>,
+    pb: Res<PlayBackState>,
+    time: Res<Time>,
+    mut step_writer: EventWriter<StepEvent>,
+) {
+    state
+        .fps_timer
+        .set_duration(std::time::Duration::try_from_secs_f32(1.0 / pb.fps).unwrap());
+    state.fps_timer.tick(time.delta());
+    if !state.fps_timer.finished() {
+        return;
+    }
+
+    step_writer.send(StepEvent);
+
+    state.fps_timer.reset();
+}
+
+#[derive(Event)]
+pub struct StepEvent;
+
+fn step_visualization(
+    mut query: Query<(&mut Handle<StandardMaterial>, &Transform), With<Led>>,
+    mut materials: ResMut<Assets<StandardMaterial>>,
+    state: ResMut<VisualizationState>,
+    time: Res<Time>,
+    mut step_reader: EventReader<StepEvent>,
+) {
+    for _ in step_reader.read() {
+        if state.shader.is_none() {
+            info!("visualization not running because shader is not set");
+            info!("Press the Compile button!");
+            return;
+        }
+
+        let shader = state.shader.as_ref().unwrap();
+
+        for (mut material, transform) in query.iter_mut() {
+            let color = shader.shade(FragThree {
+                pos: [
+                    transform.translation.x as usize,
+                    transform.translation.y as usize,
+                    transform.translation.z as usize,
+                ],
+                time: time.elapsed_seconds_f64(),
+            });
+
+            *material = materials
+                .add(Color::rgb_linear(color.red as _, color.green as _, color.blue as _).into());
         }
     }
 }
