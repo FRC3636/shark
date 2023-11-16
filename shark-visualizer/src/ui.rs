@@ -164,8 +164,6 @@ fn compile_button_changed_state(
                         manifest_writer.send(ManifestPathSetEvent(path))
                     }
                     compiler_state.manifest_folder = path;
-
-                    comp_writer.send(CompileShaderEvent);
                 }
                 CompileButtonAction::Compile => {
                     comp_writer.send(CompileShaderEvent);

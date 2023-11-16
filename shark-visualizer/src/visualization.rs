@@ -42,16 +42,6 @@ pub struct VisualizationState {
 struct LedRoot;
 
 fn initialize_visualization(mut commands: Commands) {
-    commands.spawn(PointLightBundle {
-        point_light: PointLight {
-            intensity: 1500.0,
-            shadows_enabled: true,
-            ..default()
-        },
-        transform: Transform::from_xyz(4.0, 8.0, 4.0),
-        ..default()
-    });
-
     commands.spawn((LedRoot, GlobalTransform::default(), Transform::default()));
 }
 
@@ -107,7 +97,7 @@ fn spawn_leds(
                     PbrBundle {
                         mesh: meshes.add(
                             shape::UVSphere {
-                                radius: 0.1,
+                                radius: 0.05,
                                 ..default()
                             }
                             .into(),
@@ -183,8 +173,18 @@ fn step_visualization(
                 time: time.elapsed_seconds_f64(),
             });
 
+            let color = Color::rgb_linear(color.red as _, color.green as _, color.blue as _);
+
+            let new_material = StandardMaterial {
+                base_color: Color::BLACK,
+                emissive: color,
+                alpha_mode: 
+                    AlphaMode::Opaque,
+                ..default()
+            };
+
             *material = materials
-                .add(Color::rgb_linear(color.red as _, color.green as _, color.blue as _).into());
+                .add(new_material);
         }
     }
 }
