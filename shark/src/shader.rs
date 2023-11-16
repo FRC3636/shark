@@ -91,13 +91,13 @@ impl<F: Fragment> Shader<F> for ShaderExport<'static, F> {
 pub trait Fragment: Clone + Copy + std::fmt::Debug {
     fn time(&self) -> f64;
     fn time_mut(&mut self) -> &mut f64;
-    fn pos(&self) -> &[usize];
-    fn pos_mut(&mut self) -> &mut [usize];
+    fn pos(&self) -> &[f64];
+    fn pos_mut(&mut self) -> &mut [f64];
 }
 
 #[derive(Clone, Copy, Debug)]
 pub struct FragOne {
-    pub pos: usize,
+    pub pos: f64,
     pub time: f64,
 }
 impl Fragment for FragOne {
@@ -109,18 +109,18 @@ impl Fragment for FragOne {
         &mut self.time
     }
 
-    fn pos(&self) -> &[usize] {
+    fn pos(&self) -> &[f64] {
         slice::from_ref(&self.pos)
     }
 
-    fn pos_mut(&mut self) -> &mut [usize] {
+    fn pos_mut(&mut self) -> &mut [f64] {
         slice::from_mut(&mut self.pos)
     }
 }
 
 #[derive(Clone, Copy, Debug)]
 pub struct FragTwo {
-    pub pos: [usize; 2],
+    pub pos: [f64; 2],
     pub time: f64,
 }
 impl Fragment for FragTwo {
@@ -132,18 +132,18 @@ impl Fragment for FragTwo {
         &mut self.time
     }
 
-    fn pos(&self) -> &[usize] {
+    fn pos(&self) -> &[f64] {
         &self.pos
     }
 
-    fn pos_mut(&mut self) -> &mut [usize] {
+    fn pos_mut(&mut self) -> &mut [f64] {
         &mut self.pos
     }
 }
 
 #[derive(Clone, Copy, Debug)]
 pub struct FragThree {
-    pub pos: [usize; 3],
+    pub pos: [f64; 3],
     pub time: f64,
 }
 impl Fragment for FragThree {
@@ -155,11 +155,11 @@ impl Fragment for FragThree {
         &mut self.time
     }
 
-    fn pos(&self) -> &[usize] {
+    fn pos(&self) -> &[f64] {
         &self.pos
     }
 
-    fn pos_mut(&mut self) -> &mut [usize] {
+    fn pos_mut(&mut self) -> &mut [f64] {
         &mut self.pos
     }
 }
@@ -169,7 +169,7 @@ pub trait ShaderExt<F: Fragment>: Shader<F> + Sized {
         mix(self, other, factor)
     }
 
-    fn checkerboard<S: Shader<F>>(self, other: S, stride: usize) -> Checkerboard<F, Self, S>
+    fn checkerboard<S: Shader<F>>(self, other: S, stride: f64) -> Checkerboard<F, Self, S>
     where
         Self: Shader<F>,
     {

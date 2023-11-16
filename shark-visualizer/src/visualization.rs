@@ -166,9 +166,9 @@ fn step_visualization(
         for (mut material, transform) in query.iter_mut() {
             let color = shader.shade(FragThree {
                 pos: [
-                    transform.translation.x as usize,
-                    transform.translation.y as usize,
-                    transform.translation.z as usize,
+                    transform.translation.x as _,
+                    transform.translation.y as _,
+                    transform.translation.z as _,
                 ],
                 time: time.elapsed_seconds_f64(),
             });

@@ -1,4 +1,4 @@
-use num::ToPrimitive;
+use num::{ToPrimitive, complex::ComplexFloat};
 use palette::{FromColor, Hsl, IntoColor, LinSrgb, Mix, RgbHue, ShiftHue};
 use rand::Rng;
 
@@ -96,7 +96,7 @@ pub fn rotate_hue<F: Fragment, S: Shader<F>>(shader: S, angle: f64) -> RotateHue
 }
 
 // A one dimensional gradient
-pub fn position_gradient<S: Shader<FragOne>, E: Shader<FragOne>, I: Fn(usize) -> f64 + 'static>(
+pub fn position_gradient<S: Shader<FragOne>, E: Shader<FragOne>, I: Fn(f64) -> f64 + 'static>(
     start: S,
     end: E,
     interpolator: I,
@@ -123,7 +123,7 @@ pub fn time_gradient<F: Fragment, S: Shader<F>, E: Shader<F>, I: Fn(f64) -> f64 
 pub struct Checkerboard<F: Fragment, S: Shader<F>, T: Shader<F>> {
     _marker: std::marker::PhantomData<F>,
     shaders: (S, T),
-    stride: usize,
+    stride: f64,
 }
 
 impl<F: Fragment, S: Shader<F>, T: Shader<F>> Shader<F> for Checkerboard<F, S, T> {
@@ -133,7 +133,7 @@ impl<F: Fragment, S: Shader<F>, T: Shader<F>> Shader<F> for Checkerboard<F, S, T
         let first_color = frag
             .pos()
             .iter()
-            .map(|pos| pos / self.stride)
+            .map(|pos| (pos / self.stride).abs() as usize)
             .sum::<usize>()
             % 2
             == 0;
@@ -149,7 +149,7 @@ impl<F: Fragment, S: Shader<F>, T: Shader<F>> Shader<F> for Checkerboard<F, S, T
 pub fn checkerboard<F: Fragment, S: Shader<F>, T: Shader<F>>(
     first: S,
     second: T,
-    stride: usize,
+    stride: f64,
 ) -> Checkerboard<F, S, T> {
     Checkerboard {
         _marker: std::marker::PhantomData,
@@ -196,7 +196,7 @@ impl<S: Shader<FragOne>, M: ToPrimitive> Shader<FragOne> for ModPosition<S, M, F
             pos: frag.pos
                 % self
                     .modulo
-                    .to_usize()
+                    .to_f64()
                     .expect("Could not convert modulo type to usize."),
             ..frag
         };
@@ -210,7 +210,7 @@ impl<S: Shader<FragTwo>, M: ToPrimitive> Shader<FragTwo> for ModPosition<S, M, F
     fn shade(&self, frag: FragTwo) -> Self::Output {
         let modulo = self
             .modulo
-            .to_usize()
+            .to_f64()
             .expect("Could not convert modulo type to usize.");
 
         let frag = FragTwo {
@@ -227,7 +227,7 @@ impl<S: Shader<FragThree>, M: ToPrimitive> Shader<FragThree> for ModPosition<S, 
     fn shade(&self, frag: FragThree) -> Self::Output {
         let modulo = self
             .modulo
-            .to_usize()
+            .to_f64()
             .expect("Could not convert modulo type to usize.");
 
         let frag = FragThree {
