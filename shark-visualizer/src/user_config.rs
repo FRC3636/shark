@@ -1,15 +1,15 @@
 use bevy::prelude::*;
-use serde::{Deserialize, de};
+use serde::Deserialize;
 
-use crate::ui::{ManifestPathSetEvent, ErrorMessageEvent};
+use crate::ui::{ErrorMessageEvent, ManifestPathSetEvent};
 
 pub struct UserConfigPlugin;
 impl Plugin for UserConfigPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, initialize_user_config)
-        .add_systems(Update, load_user_config)
-        .add_event::<SpawnLedsEvent>()
-        .add_event::<DespawnLedsEvent>();
+            .add_systems(Update, load_user_config)
+            .add_event::<SpawnLedsEvent>()
+            .add_event::<DespawnLedsEvent>();
     }
 }
 
@@ -78,13 +78,12 @@ pub fn load_user_config(
 
         let path = ev.0.join("shark.toml");
         if let Ok(toml) = std::fs::read_to_string(path) {
-
             match toml::from_str(toml.as_str()) {
                 Ok(config) => {
                     state.config = Some(config);
                     spawn_writer.send(SpawnLedsEvent)
-                },
-                Err(e) => { 
+                }
+                Err(e) => {
                     error!("Error parsing shark.toml: {:?}", e);
                     err_writer.send(ErrorMessageEvent::InvalidSharkToml)
                 }

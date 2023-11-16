@@ -1,8 +1,11 @@
-// use palette::Oklab;
-// use shark::{primitives::{color, off}, shader::{create_vtable_shader, VtableShader, FragThree, ShaderExt}};
+use shark::{
+    primitives::{color, off},
+    shader::{create_shader_export, FragThree, ShaderExport, ShaderExt},
+};
 
-// pub extern "C" fn shader_export() -> VtableShader<FragThree, Oklab> {
-//     let mut shader = color::<FragThree>(palette::Srgb::new(1.0, 0.0, 1.0)).checkerboard(off(), 2);
+#[no_mangle]
+pub extern "C" fn shader_export() -> ShaderExport<'static, FragThree> {
+    let shader = color::<FragThree>(palette::Srgb::new(1.0, 0.0, 1.0)).checkerboard(off(), 2);
 
-//     create_vtable_shader(Box::leak(Box::new(shader)))
-// }
+    create_shader_export(shader)
+}

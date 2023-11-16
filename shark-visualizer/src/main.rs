@@ -1,7 +1,7 @@
 mod shader_compiler;
 mod ui;
-mod visualization;
 mod user_config;
+mod visualization;
 
 use bevy::prelude::*;
 

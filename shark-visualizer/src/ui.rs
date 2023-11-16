@@ -40,6 +40,7 @@ pub enum ErrorMessageEvent {
     NoSharkToml,
     CouldntReadSharkToml,
     InvalidSharkToml,
+    UnsupportedFrag,
 }
 
 fn handle_error(
@@ -56,7 +57,8 @@ fn handle_error(
                 text.sections[0].value = "Manifest folder not set".to_string();
             }
             ErrorMessageEvent::NotAWorkspace => {
-                text.sections[0].value = "Specified folder doesn't contain 'Cargo.toml'".to_string();
+                text.sections[0].value =
+                    "Specified folder doesn't contain 'Cargo.toml'".to_string();
             }
             ErrorMessageEvent::CargoError(err) => {
                 text.sections[0].value = err.clone();
@@ -69,7 +71,7 @@ fn handle_error(
             }
             ErrorMessageEvent::NoShaderExport => {
                 text.sections[0].value =
-                    "Library has no shader_export function, or it has the incorrect header"
+                    "Library has no shader export function, or it has the incorrect header, or your shark.toml contains incorrect metadata"
                         .to_string();
             }
             ErrorMessageEvent::NoSharkToml => {
@@ -80,6 +82,9 @@ fn handle_error(
             }
             ErrorMessageEvent::InvalidSharkToml => {
                 text.sections[0].value = "Couldn't parse shark.toml, is it valid?".to_string();
+            }
+            ErrorMessageEvent::UnsupportedFrag => {
+                text.sections[0].value = "Exported shader used unsupported fragment type. Only FragThree is supported currently".to_string();
             }
         }
     }
@@ -380,7 +385,7 @@ fn initialize_ui(mut commands: Commands) {
                     ..default()
                 },
                 ErrorTimer {
-                    timer: Timer::from_seconds(3.0, TimerMode::Repeating)
+                    timer: Timer::from_seconds(3.0, TimerMode::Repeating),
                 },
             ));
         });

@@ -4,24 +4,24 @@ use crate::primitives::{
     checkerboard, extrude, mix, mod_position, mod_time, rotate_hue, Checkerboard, Extrude,
     Interpolate, ModPosition, ModTime, RotateHue,
 };
-use palette::{IntoColor, Oklab};
+use palette::{IntoColor, LinSrgb};
 
 pub trait Shader<F: Fragment> {
-    type Output: IntoColor<Oklab>;
+    type Output: IntoColor<LinSrgb<f64>>;
 
     fn shade(&self, frag: F) -> Self::Output;
 }
 
-pub trait IntoShader<F: Fragment, O: IntoColor<Oklab>> {
+pub trait IntoShader<F: Fragment, O: IntoColor<LinSrgb<f64>>> {
     type Shader: Shader<F, Output = O>;
     fn into_shader(self) -> Self::Shader;
 }
 
-pub struct FnShader<I: Fragment, O: IntoColor<Oklab>, F: Fn(I) -> O> {
+pub struct FnShader<I: Fragment, O: IntoColor<LinSrgb<f64>>, F: Fn(I) -> O> {
     _marker: std::marker::PhantomData<(I, O)>,
     f: F,
 }
-impl<I: Fragment, O: IntoColor<Oklab>, F: Fn(I) -> O> Shader<I> for FnShader<I, O, F> {
+impl<I: Fragment, O: IntoColor<LinSrgb<f64>>, F: Fn(I) -> O> Shader<I> for FnShader<I, O, F> {
     type Output = O;
 
     fn shade(&self, frag: I) -> Self::Output {
@@ -29,7 +29,7 @@ impl<I: Fragment, O: IntoColor<Oklab>, F: Fn(I) -> O> Shader<I> for FnShader<I, 
     }
 }
 
-impl<I: Fragment, O: IntoColor<Oklab>, F: Fn(I) -> O> IntoShader<I, O> for F {
+impl<I: Fragment, O: IntoColor<LinSrgb<f64>>, F: Fn(I) -> O> IntoShader<I, O> for F {
     type Shader = FnShader<I, O, F>;
 
     fn into_shader(self) -> Self::Shader {
@@ -40,7 +40,7 @@ impl<I: Fragment, O: IntoColor<Oklab>, F: Fn(I) -> O> IntoShader<I, O> for F {
     }
 }
 
-impl<F: Fragment, O: IntoColor<Oklab>> Shader<F> for dyn Fn(F) -> O {
+impl<F: Fragment, O: IntoColor<LinSrgb<f64>>> Shader<F> for dyn Fn(F) -> O {
     type Output = O;
 
     fn shade(&self, frag: F) -> Self::Output {
@@ -48,40 +48,49 @@ impl<F: Fragment, O: IntoColor<Oklab>> Shader<F> for dyn Fn(F) -> O {
     }
 }
 
-// #[repr(C)]
-// pub struct VtableShader<F: Fragment + 'static, O: IntoColor<Oklab> + 'static> {
-//     _marker: std::marker::PhantomData<O>,
-//     shader: &'static dyn Fn(F) -> O,
-// }
-// impl<F: Fragment, O: IntoColor<Oklab>> Shader<F> for VtableShader<F, O> {
-//     type Output = O;
+#[repr(C)]
+pub struct ShaderExport<'a, F: Fragment> {
+    shader: *const (),
+    f: &'a extern "C" fn(*const (), F) -> LinSrgb<f64>,
+}
+// f will always be Send even when F isn't, and the only way to create shader is when it points to a static shader implementing Send
+unsafe impl<'a, F: Fragment + Send> Send for ShaderExport<'a, F> {}
 
-//     fn shade(&self, frag: F) -> Self::Output {
-//         (self.shader)(frag)
-//     }
-// }
+pub fn create_shader_export<S: Shader<F> + 'static + Send, F: Fragment>(
+    shader: S,
+) -> ShaderExport<'static, F> {
+    let shader_ptr = (Box::leak(Box::new(shader)) as *const S).cast();
 
-// pub fn create_vtable_shader<
-//     F: Fragment,
-//     O: IntoColor<Oklab>,
-//     S: Shader<F, Output = O>,
-// >(
-//     shader: &'static mut S,
-// ) -> VtableShader<F, O> {
-//     VtableShader {
-//         _marker: std::marker::PhantomData,
-//         shader: Box::leak(Box::new(|f| shader.shade(f))),
-//     }
-// }
+    extern "C" fn shader_export_fn<S: Shader<F>, F: Fragment>(
+        shader: *const (),
+        frag: F,
+    ) -> LinSrgb<f64> {
+        let shader = unsafe { &*(shader.cast::<S>()) };
+        shader.shade(frag).into_color()
+    }
+
+    ShaderExport {
+        shader: shader_ptr,
+        f: &(shader_export_fn::<S, F> as extern "C" fn(*const (), F) -> LinSrgb<f64>),
+    }
+}
+
+impl<F: Fragment> Shader<F> for ShaderExport<'static, F> {
+    type Output = LinSrgb<f64>;
+
+    fn shade(&self, frag: F) -> Self::Output {
+        (self.f)(self.shader, frag)
+    }
+}
 
 // #[cfg(feature = "fn_trait_v2")]
-// impl<I: Fragment, O: IntoColor<Oklab>, F: Fn<(I,)>> Shader<I> for F<Output = O> {
+// impl<I: Fragment, O: IntoColor<LinSrgb<f64>>, F: Fn<(I,)>> Shader<I> for F<Output = O> {
 
 // }
 
 pub trait Fragment: Clone + Copy + std::fmt::Debug {
-    fn time(&self) -> f32;
-    fn time_mut(&mut self) -> &mut f32;
+    fn time(&self) -> f64;
+    fn time_mut(&mut self) -> &mut f64;
     fn pos(&self) -> &[usize];
     fn pos_mut(&mut self) -> &mut [usize];
 }
@@ -89,14 +98,14 @@ pub trait Fragment: Clone + Copy + std::fmt::Debug {
 #[derive(Clone, Copy, Debug)]
 pub struct FragOne {
     pub pos: usize,
-    pub time: f32,
+    pub time: f64,
 }
 impl Fragment for FragOne {
-    fn time(&self) -> f32 {
+    fn time(&self) -> f64 {
         self.time
     }
 
-    fn time_mut(&mut self) -> &mut f32 {
+    fn time_mut(&mut self) -> &mut f64 {
         &mut self.time
     }
 
@@ -112,14 +121,14 @@ impl Fragment for FragOne {
 #[derive(Clone, Copy, Debug)]
 pub struct FragTwo {
     pub pos: [usize; 2],
-    pub time: f32,
+    pub time: f64,
 }
 impl Fragment for FragTwo {
-    fn time(&self) -> f32 {
+    fn time(&self) -> f64 {
         self.time
     }
 
-    fn time_mut(&mut self) -> &mut f32 {
+    fn time_mut(&mut self) -> &mut f64 {
         &mut self.time
     }
 
@@ -135,14 +144,14 @@ impl Fragment for FragTwo {
 #[derive(Clone, Copy, Debug)]
 pub struct FragThree {
     pub pos: [usize; 3],
-    pub time: f32,
+    pub time: f64,
 }
 impl Fragment for FragThree {
-    fn time(&self) -> f32 {
+    fn time(&self) -> f64 {
         self.time
     }
 
-    fn time_mut(&mut self) -> &mut f32 {
+    fn time_mut(&mut self) -> &mut f64 {
         &mut self.time
     }
 
@@ -156,7 +165,7 @@ impl Fragment for FragThree {
 }
 
 pub trait ShaderExt<F: Fragment>: Shader<F> + Sized {
-    fn mix<S: Shader<F>>(self, other: S, factor: f32) -> Interpolate<Self, S, F> {
+    fn mix<S: Shader<F>>(self, other: S, factor: f64) -> Interpolate<Self, S, F> {
         mix(self, other, factor)
     }
 
@@ -175,7 +184,7 @@ pub trait ShaderExt<F: Fragment>: Shader<F> + Sized {
         mod_time(self, modulo)
     }
 
-    fn rotate_hue(self, angle: f32) -> RotateHue<F, Self> {
+    fn rotate_hue(self, angle: f64) -> RotateHue<F, Self> {
         rotate_hue(self, angle)
     }
 

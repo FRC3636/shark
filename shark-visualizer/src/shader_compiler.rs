@@ -1,9 +1,12 @@
-use std::path::PathBuf;
+use std::{path::{PathBuf, Path}, sync::Mutex};
 
 use bevy::prelude::*;
-use palette::Oklab;
+use palette::LinSrgb;
+use shark::shader::{FragThree, Fragment, ShaderExport};
 
-use crate::ui::ErrorMessageEvent;
+use crate::{
+    ui::ErrorMessageEvent, user_config::UserConfigState, visualization::VisualizationState,
+};
 
 #[derive(Event)]
 pub struct CompileShaderEvent;
@@ -11,6 +14,7 @@ pub struct CompileShaderEvent;
 #[derive(Resource)]
 pub struct ShaderCompilerState {
     pub manifest_folder: Option<PathBuf>,
+    lib: Option<libloading::Library>,
 }
 
 pub struct ShaderCompilerPlugin;
@@ -20,14 +24,30 @@ impl Plugin for ShaderCompilerPlugin {
             .add_systems(Update, compile_shader)
             .insert_resource(ShaderCompilerState {
                 manifest_folder: None,
+                lib: None,
             });
+    }
+}
+
+pub struct ShaderExportWrapper<'a, F: Fragment + Send> {
+    inner: Mutex<ShaderExport<'a, F>>,
+}
+
+impl<F: Fragment + Send> shark::shader::Shader<F> for ShaderExportWrapper<'static, F> {
+    type Output = LinSrgb<f64>;
+
+    fn shade(&self, frag: F) -> Self::Output {
+        let inner = self.inner.lock().unwrap();
+        inner.shade(frag)
     }
 }
 
 fn compile_shader(
     mut compile_ev: EventReader<CompileShaderEvent>,
     mut error_writer: EventWriter<ErrorMessageEvent>,
-    state: Res<ShaderCompilerState>,
+    mut state: ResMut<ShaderCompilerState>,
+    user_config: Res<UserConfigState>,
+    mut visualization: ResMut<VisualizationState>,
 ) {
     for _ in compile_ev.read() {
         match state.manifest_folder {
@@ -39,22 +59,48 @@ fn compile_shader(
                             error_writer.send(ErrorMessageEvent::TooManyLibs)
                         }
                         if let Some(lib) = paths.into_iter().next() {
-                            unsafe {
-                                let lib = libloading::Library::new(lib).unwrap();
-                                info!("Loaded library: {:?}", lib);
-                                // if let Ok(shader) =
-                                //     lib.get::<libloading::Symbol<
-                                //         unsafe extern "C" fn() -> shark::shader::VtableShader<
-                                //             shark::shader::FragThree,
-                                //             Oklab,
-                                //         >,
-                                //     >>(b"shader_export")
-                                // {
-                                //     info!("Loaded shader!");
-                                // } else {
-                                //     error_writer.send(ErrorMessageEvent::NoShaderExport)
-                                // }
+                            let lib = unsafe { libloading::Library::new(lib).unwrap() };
+                            info!("Loaded library: {:?}", lib);
+
+                            let config = &user_config.config.as_ref().unwrap().visualization;
+
+                            let symbol_name = config.shader_export_name.as_bytes().to_vec();
+
+                            let shader: Box<
+                                dyn shark::shader::Shader<FragThree, Output = LinSrgb<f64>>
+                                    + Send
+                                    + Sync,
+                            > = unsafe {
+                                match config.fragment {
+                                    crate::user_config::FragType::FragOne
+                                    | crate::user_config::FragType::FragTwo => {
+                                        error_writer.send(ErrorMessageEvent::UnsupportedFrag);
+                                        continue;
+                                    }
+                                    crate::user_config::FragType::FragThree => {
+                                        if let Ok(func) = lib.get::<libloading::Symbol<
+                                            unsafe extern "C" fn() -> ShaderExport<
+                                                'static,
+                                                FragThree,
+                                            >,
+                                        >>(
+                                            &symbol_name
+                                        ) {
+                                            Box::new(ShaderExportWrapper {
+                                                inner: Mutex::new(func()),
+                                            })
+                                        } else {
+                                            error_writer.send(ErrorMessageEvent::NoShaderExport);
+                                            continue;
+                                        }
+                                    }
+                                }
                             };
+                            info!("Successfully created shader!");
+                            drop(visualization.shader.replace(shader));
+                            info!("Replaced old shader");
+                            drop(state.lib.replace(lib));
+                            info!("Unloaded old library");
                         } else {
                             error_writer.send(ErrorMessageEvent::NoLibs)
                         }
@@ -67,7 +113,7 @@ fn compile_shader(
     }
 }
 
-fn compile_from_manifest_root(path: &PathBuf) -> Result<Vec<PathBuf>, String> {
+fn compile_from_manifest_root(path: &Path) -> Result<Vec<PathBuf>, String> {
     let config = cargo::util::Config::default().unwrap();
     let workspace = cargo::core::Workspace::new(&path.join("Cargo.toml"), &config)
         .map_err(|e| e.to_string())?;

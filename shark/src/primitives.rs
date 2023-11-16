@@ -1,5 +1,5 @@
 use num::ToPrimitive;
-use palette::{FromColor, IntoColor, Mix, Okhsl, Oklab, OklabHue, ShiftHue};
+use palette::{FromColor, Hsl, IntoColor, LinSrgb, Mix, RgbHue, ShiftHue};
 use rand::Rng;
 
 use crate::shader::{FragOne, FragThree, FragTwo, Fragment, Shader};
@@ -8,11 +8,11 @@ pub struct Off<F: Fragment> {
     _marker: std::marker::PhantomData<F>,
 }
 impl<F: Fragment> Shader<F> for Off<F> {
-    type Output = Oklab;
+    type Output = LinSrgb<f64>;
 
     fn shade(&self, _frag: F) -> Self::Output {
         // Full black
-        Oklab::new(0.0, 0.0, 0.0)
+        LinSrgb::new(0.0, 0.0, 0.0)
     }
 }
 
@@ -23,19 +23,19 @@ pub fn off<F: Fragment>() -> Off<F> {
 }
 
 pub struct Color<F: Fragment> {
-    color: Oklab,
+    color: LinSrgb<f64>,
     _marker: std::marker::PhantomData<F>,
 }
 
 impl<F: Fragment> Shader<F> for Color<F> {
-    type Output = Oklab;
+    type Output = LinSrgb<f64>;
 
     fn shade(&self, _frag: F) -> Self::Output {
         self.color
     }
 }
 
-pub fn color<F: Fragment>(color: impl IntoColor<Oklab>) -> Color<F> {
+pub fn color<F: Fragment>(color: impl IntoColor<LinSrgb<f64>>) -> Color<F> {
     Color {
         color: color.into_color(),
         _marker: std::marker::PhantomData,
@@ -45,10 +45,10 @@ pub fn color<F: Fragment>(color: impl IntoColor<Oklab>) -> Color<F> {
 pub struct Interpolate<S: Shader<F>, E: Shader<F>, F: Fragment> {
     start: S,
     end: E,
-    interpolator: Box<dyn Fn(F) -> f32>,
+    interpolator: Box<dyn Fn(F) -> f64>,
 }
 impl<S: Shader<F>, E: Shader<F>, F: Fragment> Shader<F> for Interpolate<S, E, F> {
-    type Output = Oklab;
+    type Output = LinSrgb<f64>;
 
     fn shade(&self, frag: F) -> Self::Output {
         let factor = (self.interpolator)(frag);
@@ -63,7 +63,7 @@ impl<S: Shader<F>, E: Shader<F>, F: Fragment> Shader<F> for Interpolate<S, E, F>
 pub fn mix<F: Fragment, S: Shader<F>, E: Shader<F>>(
     start: S,
     end: E,
-    factor: f32,
+    factor: f64,
 ) -> Interpolate<S, E, F> {
     Interpolate {
         start,
@@ -75,19 +75,19 @@ pub fn mix<F: Fragment, S: Shader<F>, E: Shader<F>>(
 pub struct RotateHue<F: Fragment, S: Shader<F>> {
     _marker: std::marker::PhantomData<F>,
     shader: S,
-    angle: f32,
+    angle: f64,
 }
 impl<F: Fragment, S: Shader<F>> Shader<F> for RotateHue<F, S> {
-    type Output = Oklab;
+    type Output = LinSrgb<f64>;
 
     fn shade(&self, frag: F) -> Self::Output {
-        let col = self.shader.shade(frag);
-        let col: Okhsl = Okhsl::from_color(col.into_color());
+        let col = self.shader.shade(frag).into_color();
+        let col = Hsl::from_color(col);
         col.shift_hue(self.angle).into_color()
     }
 }
 
-pub fn rotate_hue<F: Fragment, S: Shader<F>>(shader: S, angle: f32) -> RotateHue<F, S> {
+pub fn rotate_hue<F: Fragment, S: Shader<F>>(shader: S, angle: f64) -> RotateHue<F, S> {
     RotateHue {
         _marker: std::marker::PhantomData,
         shader,
@@ -96,7 +96,7 @@ pub fn rotate_hue<F: Fragment, S: Shader<F>>(shader: S, angle: f32) -> RotateHue
 }
 
 // A one dimensional gradient
-pub fn position_gradient<S: Shader<FragOne>, E: Shader<FragOne>, I: Fn(usize) -> f32 + 'static>(
+pub fn position_gradient<S: Shader<FragOne>, E: Shader<FragOne>, I: Fn(usize) -> f64 + 'static>(
     start: S,
     end: E,
     interpolator: I,
@@ -104,14 +104,11 @@ pub fn position_gradient<S: Shader<FragOne>, E: Shader<FragOne>, I: Fn(usize) ->
     Interpolate {
         start,
         end,
-        interpolator: Box::new(move |frag| {
-            let factor = (interpolator)(frag.pos);
-            factor
-        }),
+        interpolator: Box::new(move |frag| (interpolator)(frag.pos)),
     }
 }
 
-pub fn time_gradient<F: Fragment, S: Shader<F>, E: Shader<F>, I: Fn(f32) -> f32 + 'static>(
+pub fn time_gradient<F: Fragment, S: Shader<F>, E: Shader<F>, I: Fn(f64) -> f64 + 'static>(
     start: S,
     end: E,
     interpolator: I,
@@ -119,10 +116,7 @@ pub fn time_gradient<F: Fragment, S: Shader<F>, E: Shader<F>, I: Fn(f32) -> f32 
     Interpolate {
         start,
         end,
-        interpolator: Box::new(move |frag| {
-            let factor = (interpolator)(frag.time());
-            factor
-        }),
+        interpolator: Box::new(move |frag| (interpolator)(frag.time())),
     }
 }
 
@@ -133,7 +127,7 @@ pub struct Checkerboard<F: Fragment, S: Shader<F>, T: Shader<F>> {
 }
 
 impl<F: Fragment, S: Shader<F>, T: Shader<F>> Shader<F> for Checkerboard<F, S, T> {
-    type Output = Oklab;
+    type Output = LinSrgb<f64>;
 
     fn shade(&self, frag: F) -> Self::Output {
         let first_color = frag
@@ -168,16 +162,17 @@ pub struct Random<F: Fragment> {
     _marker: std::marker::PhantomData<F>,
 }
 impl<F: Fragment> Shader<F> for Random<F> {
-    type Output = Okhsl;
+    type Output = LinSrgb<f64>;
 
     fn shade(&self, _frag: F) -> Self::Output {
         let mut rng = rand::thread_rng();
         // Okhsl because it's the easiest to generate random colors with
-        Okhsl::new(
-            OklabHue::new(rng.gen_range(0.0..360.0)),
+        Hsl::new(
+            RgbHue::new(rng.gen_range(0.0..360.0)),
             rng.gen_range(0.0..1.0),
             rng.gen_range(0.0..1.0),
         )
+        .into_color()
     }
 }
 
@@ -267,14 +262,12 @@ pub struct ModTime<F: Fragment, S: Shader<F>, M: ToPrimitive> {
 impl<F: Fragment, S: Shader<F>, M: ToPrimitive> Shader<F> for ModTime<F, S, M> {
     type Output = S::Output;
 
-    fn shade(&self, frag: F) -> Self::Output {
-        let mut frag = frag.clone();
-
+    fn shade(&self, mut frag: F) -> Self::Output {
         *frag.time_mut() = frag.time()
             % self
                 .modulo
-                .to_f32()
-                .expect("Could not convert modulo type to f32.");
+                .to_f64()
+                .expect("Could not convert modulo type to f64.");
 
         self.shader.shade(frag)
     }
