@@ -27,7 +27,7 @@ pub struct ShaderCompilerPlugin;
 impl Plugin for ShaderCompilerPlugin {
     fn build(&self, app: &mut App) {
         app.add_event::<CompileShaderEvent>()
-            .add_systems(Update, compile_shader)
+            .add_systems(Update, handle_compile_events)
             .insert_resource(ShaderCompilerState {
                 manifest_folder: None,
                 lib_path: None,
@@ -49,7 +49,9 @@ impl<F: Fragment + Send> shark::shader::Shader<F> for ShaderExportWrapper<'stati
     }
 }
 
-fn compile_shader(
+type ShaderExportFn<F> = unsafe extern "C" fn() -> ShaderExport<'static, F>;
+
+fn handle_compile_events(
     mut compile_ev: EventReader<CompileShaderEvent>,
     mut error_writer: EventWriter<ErrorMessageEvent>,
     mut state: ResMut<ShaderCompilerState>,
@@ -57,73 +59,81 @@ fn compile_shader(
     mut visualization: ResMut<VisualizationState>,
 ) {
     for _ in compile_ev.read() {
-        match state.manifest_folder {
-            Some(ref path) => {
-                info!("Compiling path: {:?}", path);
-                match compile_from_manifest_root(path) {
-                    Ok(paths) => {
-                        if paths.len() > 1 {
-                            error_writer.send(ErrorMessageEvent::TooManyLibs)
-                        }
-                        if let Some(ref path) = paths.into_iter().next() {
-                            let lib = unsafe { libloading::Library::new(path).unwrap() };
-                            info!("Loaded library: {:?}", lib);
+        let library_path = match compile_shader(&state) {
+            Err(e) => {
+                error_writer.send(e);
+                continue;
+            }
+            Ok(path) => {
+                // TODO: this is a hack, maybe we can let cargo know about these files and clean somehow?
+                if let Some(old) = state.lib_path.as_ref() {
+                    std::fs::remove_file(old)
+                        .unwrap_or_else(|_| warn!("Failed to remove old library"));
+                }
+                state.lib_path = Some(path.to_owned());
 
-                            let config = &user_config.config.as_ref().unwrap().visualization;
+                path
+            }
+        };
 
-                            let symbol_name = config.shader_export_name.as_bytes().to_vec();
+        let lib = unsafe { libloading::Library::new(library_path).unwrap() };
+        info!("Loaded library: {:?}", lib);
 
-                            let shader: Box<
-                                dyn shark::shader::Shader<FragThree, Output = LinSrgb<f64>>
-                                    + Send
-                                    + Sync,
-                            > = unsafe {
-                                match config.fragment {
-                                    crate::user_config::FragType::FragOne
-                                    | crate::user_config::FragType::FragTwo => {
-                                        error_writer.send(ErrorMessageEvent::UnsupportedFrag);
-                                        continue;
-                                    }
-                                    crate::user_config::FragType::FragThree => {
-                                        if let Ok(func) = lib.get::<libloading::Symbol<
-                                            unsafe extern "C" fn() -> ShaderExport<
-                                                'static,
-                                                FragThree,
-                                            >,
-                                        >>(
-                                            &symbol_name
-                                        ) {
-                                            Box::new(ShaderExportWrapper {
-                                                inner: Mutex::new(func()),
-                                            })
-                                        } else {
-                                            error_writer.send(ErrorMessageEvent::NoShaderExport);
-                                            continue;
-                                        }
-                                    }
-                                }
-                            };
-                            // TODO: this is a hack, and it usually doesn't work for some reason. Why?
-                            if let Some(old) = state.lib_path.as_ref() {
-                                std::fs::remove_file(old)
-                                    .unwrap_or_else(|_| warn!("Failed to remove old library"));
+        let config = &user_config.config.as_ref().unwrap().visualization;
+
+        let symbol_name = config.shader_export_name.as_bytes().to_vec();
+
+        let shader = unsafe {
+            match config.fragment {
+                // Small dimensional fragments are not supported yet
+                crate::user_config::FragType::FragOne | crate::user_config::FragType::FragTwo => {
+                    error_writer.send(ErrorMessageEvent::UnsupportedFrag);
+                    continue;
+                }
+                crate::user_config::FragType::FragThree => {
+                    let func: libloading::Symbol<ShaderExportFn<FragThree>> =
+                        match lib.get(&symbol_name) {
+                            Ok(func) => func,
+                            Err(_) => {
+                                error_writer.send(ErrorMessageEvent::NoShaderExport);
+                                continue;
                             }
-                            state.lib_path = Some(path.to_owned());
+                        };
 
-                            info!("Successfully created shader!");
-                            drop(visualization.shader.replace(shader));
-                            info!("Replaced old shader");
-                            drop(state.lib.replace(lib));
-                            info!("Unloaded old library");
-                        } else {
-                            error_writer.send(ErrorMessageEvent::NoLibs)
-                        }
-                    }
-                    Err(e) => error_writer.send(ErrorMessageEvent::CargoError(e)),
+                    Box::new(ShaderExportWrapper {
+                        inner: Mutex::new(func()),
+                    })
                 }
             }
-            None => error_writer.send(ErrorMessageEvent::ManifestPathNotSet),
-        }
+        };
+
+        info!("Successfully created shader!");
+        drop(visualization.shader.replace(shader));
+        info!("Replaced old shader");
+        drop(state.lib.replace(lib));
+        info!("Unloaded old library");
+    }
+}
+
+fn compile_shader(state: &ShaderCompilerState) -> Result<PathBuf, ErrorMessageEvent> {
+    if state.manifest_folder.is_none() {
+        return Err(ErrorMessageEvent::ManifestPathNotSet);
+    }
+    let manifest_root = state.manifest_folder.as_ref().unwrap();
+
+    let libs = match compile_from_manifest_root(manifest_root) {
+        Ok(libs) => libs,
+        Err(e) => return Err(ErrorMessageEvent::CargoError(e)),
+    };
+
+    if libs.len() > 1 {
+        return Err(ErrorMessageEvent::TooManyLibs);
+    }
+
+    if let Some(lib_path) = libs.into_iter().next() {
+        Ok(lib_path)
+    } else {
+        Err(ErrorMessageEvent::NoLibs)
     }
 }
 

@@ -1,8 +1,8 @@
-use palette::Srgb;
+use palette::{Srgb, IntoColor};
 use shark::{
-    primitives::{checkerboard, color},
+    primitives::{checkerboard, color, off},
     shader::{
-        create_shader_export, FragOne, FragThree, Fragment, IntoShader, ShaderExport, ShaderExt,
+        create_shader_export, FragOne, FragThree, Fragment, IntoShader, ShaderExport, ShaderExt, Shader,
     },
 };
 
@@ -12,7 +12,7 @@ pub extern "C" fn shader_export() -> ShaderExport<'static, FragThree> {
         if frag.time() % 2.0 < 1.0 {
             Srgb::new(1.0, 0.0, 0.0)
         } else {
-            Srgb::new(0.0, 1.0, 0.0)
+            off().shade(frag).into_color()
         }
     })
     .into_shader();
@@ -22,5 +22,6 @@ pub extern "C" fn shader_export() -> ShaderExport<'static, FragThree> {
         color(Srgb::new(0.0, 0.0, 1.0)),
         2.0,
     );
+    // let shader = off();
     create_shader_export(shader)
 }
