@@ -5,6 +5,7 @@ use std::{
 
 use bevy::prelude::*;
 use palette::LinSrgb;
+use rand::Rng;
 use shark::shader::{FragThree, Fragment, ShaderExport};
 
 use crate::{
@@ -17,6 +18,7 @@ pub struct CompileShaderEvent;
 #[derive(Resource)]
 pub struct ShaderCompilerState {
     pub manifest_folder: Option<PathBuf>,
+    lib_path: Option<PathBuf>,
     lib: Option<libloading::Library>,
 }
 
@@ -27,6 +29,7 @@ impl Plugin for ShaderCompilerPlugin {
             .add_systems(Update, compile_shader)
             .insert_resource(ShaderCompilerState {
                 manifest_folder: None,
+                lib_path: None,
                 lib: None,
             });
     }
@@ -61,8 +64,8 @@ fn compile_shader(
                         if paths.len() > 1 {
                             error_writer.send(ErrorMessageEvent::TooManyLibs)
                         }
-                        if let Some(lib) = paths.into_iter().next() {
-                            let lib = unsafe { libloading::Library::new(lib).unwrap() };
+                        if let Some(ref path) = paths.into_iter().next() {
+                            let lib = unsafe { libloading::Library::new(path).unwrap() };
                             info!("Loaded library: {:?}", lib);
 
                             let config = &user_config.config.as_ref().unwrap().visualization;
@@ -99,6 +102,12 @@ fn compile_shader(
                                     }
                                 }
                             };
+                            // TODO: this is a hack, and it usually doesn't work for some reason. Why?
+                            if let Some(old) = state.lib_path.as_ref() {
+                                std::fs::remove_file(old).unwrap_or_else(|_| warn!("Failed to remove old library"));
+                            }
+                            state.lib_path = Some(path.to_owned());
+
                             info!("Successfully created shader!");
                             drop(visualization.shader.replace(shader));
                             info!("Replaced old shader");
@@ -125,9 +134,36 @@ fn compile_from_manifest_root(path: &Path) -> Result<Vec<PathBuf>, String> {
         cargo::ops::CompileOptions::new(&config, cargo::core::compiler::CompileMode::Build)
             .map_err(|e| e.to_string())?;
     options.target_rustc_crate_types = Some(vec![String::from("cdylib")]);
+    options.build_config.message_format = cargo::core::compiler::MessageFormat::Short;
 
     let comp = cargo::ops::compile(&workspace, &options).unwrap();
-    let output_libs = comp.cdylibs.into_iter().map(|unit| unit.path).collect();
+    let output_libs = comp
+        .cdylibs
+        .into_iter()
+        .map(|unit| unit.path)
+        // This is to avoid a bug (probably in libloading) 
+        // where the loaded Library is not changed after load and unload if it has the same filename both times
+        // even though the file itself has changed
+        .map(|path| {
+            let output_name = rand::thread_rng()
+                .sample_iter(&rand::distributions::Alphanumeric)
+                .take(10)
+                .map(char::from)
+                .collect::<String>();
+            
+            let mut new_path = path.clone();
+            new_path.set_file_name(output_name);
+
+            // just in case
+            if let Some(ext) = path.extension() {
+                new_path.set_extension(ext);
+            }
+
+            std::fs::rename(&path, &new_path).unwrap();
+            info!("Renamed {:?} to {:?}", path.file_name(), new_path.file_name());
+            new_path
+        })
+        .collect();
 
     Ok(output_libs)
 }

@@ -5333,6 +5333,7 @@ dependencies = [
  "image",
  "libloading 0.8.1",
  "palette",
+ "rand",
  "rfd",
  "serde",
  "shark",
