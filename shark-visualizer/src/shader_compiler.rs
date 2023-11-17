@@ -24,20 +24,6 @@ pub struct ShaderCompilerState {
     lib: Option<libloading::Library>,
 }
 
-/// Provides access to APIs only available on the main thread.
-#[derive(Resource)]
-pub struct SystemUI {
-    __private: PhantomData<()>,
-}
-
-impl SystemUI {
-    fn new() -> Self {
-        Self {
-            __private: PhantomData,
-        }
-    }
-}
-
 pub struct ShaderCompilerPlugin;
 impl Plugin for ShaderCompilerPlugin {
     fn build(&self, app: &mut App) {
@@ -47,8 +33,7 @@ impl Plugin for ShaderCompilerPlugin {
                 manifest_folder: None,
                 lib_path: None,
                 lib: None,
-            })
-            .insert_non_send_resource(SystemUI::new());
+            });
     }
 }
 
