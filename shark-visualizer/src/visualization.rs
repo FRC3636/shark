@@ -178,13 +178,11 @@ fn step_visualization(
             let new_material = StandardMaterial {
                 base_color: Color::BLACK,
                 emissive: color,
-                alpha_mode: 
-                    AlphaMode::Opaque,
+                alpha_mode: AlphaMode::Opaque,
                 ..default()
             };
 
-            *material = materials
-                .add(new_material);
+            *material = materials.add(new_material);
         }
     }
 }
