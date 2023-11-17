@@ -6,7 +6,7 @@ use crate::shader_compiler::{CompileShaderEvent, ShaderCompilerState};
 use crate::visualization::StepEvent;
 use crate::PlayBackState;
 
-use self::system::{pick_file, SystemFilePicker};
+use self::system::SystemFilePicker;
 
 pub mod system;
 
@@ -152,7 +152,7 @@ fn compile_button_changed_state(
         if let Interaction::Pressed = *interaction {
             match action {
                 CompileButtonAction::SetFilePath => {
-                    let path = pick_file(&picker, "Select manifest root", "~");
+                    let path = picker.pick_file("Select manifest root", "~");
                     if let Some(path) = path.clone() {
                         if !path.join("Cargo.toml").exists() {
                             err_writer.send(ErrorMessageEvent::NotAWorkspace);
