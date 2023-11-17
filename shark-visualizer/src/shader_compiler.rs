@@ -6,6 +6,7 @@ use std::{
 use bevy::prelude::*;
 use palette::LinSrgb;
 use rand::Rng;
+
 use shark::shader::{FragThree, Fragment, ShaderExport};
 
 use crate::{
@@ -104,7 +105,8 @@ fn compile_shader(
                             };
                             // TODO: this is a hack, and it usually doesn't work for some reason. Why?
                             if let Some(old) = state.lib_path.as_ref() {
-                                std::fs::remove_file(old).unwrap_or_else(|_| warn!("Failed to remove old library"));
+                                std::fs::remove_file(old)
+                                    .unwrap_or_else(|_| warn!("Failed to remove old library"));
                             }
                             state.lib_path = Some(path.to_owned());
 
@@ -141,7 +143,7 @@ fn compile_from_manifest_root(path: &Path) -> Result<Vec<PathBuf>, String> {
         .cdylibs
         .into_iter()
         .map(|unit| unit.path)
-        // This is to avoid a bug (probably in libloading) 
+        // This is to avoid a bug (probably in libloading)
         // where the loaded Library is not changed after load and unload if it has the same filename both times
         // even though the file itself has changed
         .map(|path| {
@@ -150,7 +152,7 @@ fn compile_from_manifest_root(path: &Path) -> Result<Vec<PathBuf>, String> {
                 .take(10)
                 .map(char::from)
                 .collect::<String>();
-            
+
             let mut new_path = path.clone();
             new_path.set_file_name(output_name);
 
@@ -160,7 +162,11 @@ fn compile_from_manifest_root(path: &Path) -> Result<Vec<PathBuf>, String> {
             }
 
             std::fs::rename(&path, &new_path).unwrap();
-            info!("Renamed {:?} to {:?}", path.file_name(), new_path.file_name());
+            info!(
+                "Renamed {:?} to {:?}",
+                path.file_name(),
+                new_path.file_name()
+            );
             new_path
         })
         .collect();

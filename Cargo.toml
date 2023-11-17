@@ -1,9 +1,10 @@
 [workspace]
 resolver = "2"
-members = [ "example_visualization",
+members = [
+    "example_visualization",
     "shark",
     "shark-visualizer",
-    "shark-ws281x",
+    # "shark-ws281x",
 ]
 
 [profile.dev.package."*"]

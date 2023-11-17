@@ -1,6 +1,6 @@
 use palette::Srgb;
 use shark::{
-    primitives::{color, checkerboard},
+    primitives::{checkerboard, color},
     shader::{
         create_shader_export, FragOne, FragThree, Fragment, IntoShader, ShaderExport, ShaderExt,
     },
@@ -17,6 +17,10 @@ pub extern "C" fn shader_export() -> ShaderExport<'static, FragThree> {
     })
     .into_shader();
 
-    let shader = checkerboard(flip_flop.extrude().extrude(), color(Srgb::new(0.0, 0.0, 1.0)), 2.0);
+    let shader = checkerboard(
+        flip_flop.extrude().extrude(),
+        color(Srgb::new(0.0, 0.0, 1.0)),
+        2.0,
+    );
     create_shader_export(shader)
 }
