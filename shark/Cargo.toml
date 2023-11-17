@@ -16,5 +16,3 @@ rand = { version = "0.8.5", features = ["small_rng"] }
 [features]
 default = []
 
-unstable = ["fn_trait_v2"]
-fn_trait_v2 = []

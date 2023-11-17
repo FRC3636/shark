@@ -1,4 +1,4 @@
-use num::{ToPrimitive, complex::ComplexFloat};
+use num::ToPrimitive;
 use palette::{FromColor, Hsl, IntoColor, LinSrgb, Mix, RgbHue, ShiftHue};
 use rand::Rng;
 
@@ -45,7 +45,7 @@ pub fn color<F: Fragment>(color: impl IntoColor<LinSrgb<f64>>) -> Color<F> {
 pub struct Interpolate<S: Shader<F>, E: Shader<F>, F: Fragment> {
     start: S,
     end: E,
-    interpolator: Box<dyn Fn(F) -> f64>,
+    interpolator: Box<dyn Fn(F) -> f64 + Send>,
 }
 impl<S: Shader<F>, E: Shader<F>, F: Fragment> Shader<F> for Interpolate<S, E, F> {
     type Output = LinSrgb<f64>;
@@ -96,7 +96,11 @@ pub fn rotate_hue<F: Fragment, S: Shader<F>>(shader: S, angle: f64) -> RotateHue
 }
 
 // A one dimensional gradient
-pub fn position_gradient<S: Shader<FragOne>, E: Shader<FragOne>, I: Fn(f64) -> f64 + 'static>(
+pub fn position_gradient<
+    S: Shader<FragOne>,
+    E: Shader<FragOne>,
+    I: Fn(f64) -> f64 + Send + 'static,
+>(
     start: S,
     end: E,
     interpolator: I,
@@ -108,7 +112,12 @@ pub fn position_gradient<S: Shader<FragOne>, E: Shader<FragOne>, I: Fn(f64) -> f
     }
 }
 
-pub fn time_gradient<F: Fragment, S: Shader<F>, E: Shader<F>, I: Fn(f64) -> f64 + 'static>(
+pub fn time_gradient<
+    F: Fragment,
+    S: Shader<F>,
+    E: Shader<F>,
+    I: Fn(f64) -> f64 + Send + 'static,
+>(
     start: S,
     end: E,
     interpolator: I,
@@ -289,22 +298,22 @@ pub struct Extrude<F: Fragment, S: Shader<F>> {
     shader: S,
 }
 
-impl<S: Shader<FragOne>> Shader<FragOne> for Extrude<FragOne, S> {
+impl<S: Shader<FragOne>> Shader<FragTwo> for Extrude<FragOne, S> {
     type Output = S::Output;
 
-    fn shade(&self, frag: FragOne) -> Self::Output {
+    fn shade(&self, frag: FragTwo) -> Self::Output {
         let frag = FragOne {
-            pos: frag.pos,
+            pos: frag.pos[0],
             time: frag.time,
         };
         self.shader.shade(frag)
     }
 }
 
-impl<S: Shader<FragTwo>> Shader<FragTwo> for Extrude<FragTwo, S> {
+impl<S: Shader<FragTwo>> Shader<FragThree> for Extrude<FragTwo, S> {
     type Output = S::Output;
 
-    fn shade(&self, frag: FragTwo) -> Self::Output {
+    fn shade(&self, frag: FragThree) -> Self::Output {
         let frag = FragTwo {
             pos: [frag.pos[0], frag.pos[1]],
             time: frag.time,

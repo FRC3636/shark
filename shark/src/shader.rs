@@ -83,11 +83,6 @@ impl<F: Fragment> Shader<F> for ShaderExport<'static, F> {
     }
 }
 
-// #[cfg(feature = "fn_trait_v2")]
-// impl<I: Fragment, O: IntoColor<LinSrgb<f64>>, F: Fn<(I,)>> Shader<I> for F<Output = O> {
-
-// }
-
 pub trait Fragment: Clone + Copy + std::fmt::Debug {
     fn time(&self) -> f64;
     fn time_mut(&mut self) -> &mut f64;

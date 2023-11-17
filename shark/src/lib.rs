@@ -1,5 +1,3 @@
-#![cfg_attr(feature = "fn_trait_v2", feature(fn_trait_v2))]
-
 pub mod primitives;
 pub mod shader;
 
