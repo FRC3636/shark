@@ -1,5 +1,4 @@
 use std::{
-    marker::PhantomData,
     path::{Path, PathBuf},
     sync::Mutex,
 };
@@ -7,7 +6,7 @@ use std::{
 use bevy::prelude::*;
 use palette::LinSrgb;
 use rand::Rng;
-use rfd::FileDialog;
+
 use shark::shader::{FragThree, Fragment, ShaderExport};
 
 use crate::{

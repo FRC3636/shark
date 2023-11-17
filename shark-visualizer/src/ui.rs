@@ -1,7 +1,6 @@
-use std::path::{Path, PathBuf};
+use std::path::PathBuf;
 
 use bevy::prelude::*;
-use rfd::FileDialog;
 
 use crate::shader_compiler::{CompileShaderEvent, ShaderCompilerState};
 use crate::visualization::StepEvent;
