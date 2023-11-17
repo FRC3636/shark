@@ -1,10 +1,12 @@
 use std::{
+    marker::PhantomData,
     path::{Path, PathBuf},
     sync::Mutex,
 };
 
 use bevy::prelude::*;
 use palette::LinSrgb;
+use rfd::FileDialog;
 use shark::shader::{FragThree, Fragment, ShaderExport};
 
 use crate::{
@@ -20,6 +22,20 @@ pub struct ShaderCompilerState {
     lib: Option<libloading::Library>,
 }
 
+/// Provides access to APIs only available on the main thread.
+#[derive(Resource)]
+pub struct SystemUI {
+    __private: PhantomData<()>,
+}
+
+impl SystemUI {
+    fn new() -> Self {
+        Self {
+            __private: PhantomData,
+        }
+    }
+}
+
 pub struct ShaderCompilerPlugin;
 impl Plugin for ShaderCompilerPlugin {
     fn build(&self, app: &mut App) {
@@ -28,7 +44,8 @@ impl Plugin for ShaderCompilerPlugin {
             .insert_resource(ShaderCompilerState {
                 manifest_folder: None,
                 lib: None,
-            });
+            })
+            .insert_non_send_resource(SystemUI::new());
     }
 }
 

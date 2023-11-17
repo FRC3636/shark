@@ -1,9 +1,9 @@
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 
 use bevy::prelude::*;
 use rfd::FileDialog;
 
-use crate::shader_compiler::{CompileShaderEvent, ShaderCompilerState};
+use crate::shader_compiler::{CompileShaderEvent, ShaderCompilerState, SystemUI};
 use crate::visualization::StepEvent;
 use crate::PlayBackState;
 
@@ -143,15 +143,13 @@ fn compile_button_changed_state(
     mut manifest_writer: EventWriter<ManifestPathSetEvent>,
     mut err_writer: EventWriter<ErrorMessageEvent>,
     mut compiler_state: ResMut<ShaderCompilerState>,
+    ui: NonSend<SystemUI>,
 ) {
     for (interaction, action) in query.iter_mut() {
         if let Interaction::Pressed = *interaction {
             match action {
                 CompileButtonAction::SetFilePath => {
-                    let path = FileDialog::new()
-                        .set_directory("~")
-                        .set_title("Select manifest root")
-                        .pick_folder();
+                    let path = pick_file(&ui, "Select manifest root", "~");
                     if let Some(path) = path.clone() {
                         if !path.join("Cargo.toml").exists() {
                             err_writer.send(ErrorMessageEvent::NotAWorkspace);
@@ -393,4 +391,12 @@ fn initialize_ui(mut commands: Commands) {
                 },
             ));
         });
+}
+
+/// Prompt the user to pick a file.
+pub fn pick_file(_ui: &SystemUI, title: &str, directory: impl AsRef<Path>) -> Option<PathBuf> {
+    FileDialog::new()
+        .set_directory(directory)
+        .set_title(title)
+        .pick_folder()
 }
