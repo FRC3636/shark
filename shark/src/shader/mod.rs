@@ -1,6 +1,8 @@
+pub mod primitives;
+
 use core::slice;
 
-use crate::primitives::{
+use primitives::{
     checkerboard, extrude, mix, mod_position, mod_time, rotate_hue, Checkerboard, Extrude,
     Interpolate, ModPosition, ModTime, RotateHue,
 };

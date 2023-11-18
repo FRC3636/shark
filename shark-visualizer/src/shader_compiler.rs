@@ -7,7 +7,10 @@ use bevy::prelude::*;
 use palette::LinSrgb;
 use rand::Rng;
 
-use shark::shader::{FragThree, Fragment, ShaderExport};
+use shark::{
+    shader::{FragThree, Fragment, ShaderExport},
+    VisualizationExports,
+};
 
 use crate::{
     ui::ErrorMessageEvent, user_config::UserConfigState, visualization::VisualizationState,
@@ -49,7 +52,7 @@ impl<F: Fragment + Send> shark::shader::Shader<F> for ShaderExportWrapper<'stati
     }
 }
 
-type ShaderExportFn<F> = unsafe extern "C" fn() -> ShaderExport<'static, F>;
+type ShaderExportFn<F> = unsafe extern "C" fn() -> VisualizationExports<F>;
 
 fn handle_compile_events(
     mut compile_ev: EventReader<CompileShaderEvent>,
@@ -101,7 +104,7 @@ fn handle_compile_events(
                         };
 
                     Box::new(ShaderExportWrapper {
-                        inner: Mutex::new(func()),
+                        inner: Mutex::new(func().shader),
                     })
                 }
             }
