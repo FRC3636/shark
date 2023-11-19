@@ -83,7 +83,6 @@ fn spawn_leds(
 
     for _ in spawn_ev.read() {
         for led in state.exports.as_ref().unwrap().points() {
-            info!("Spawning LED at {:?}", led);
             commands
                 .spawn((
                     PbrBundle {
@@ -111,6 +110,7 @@ fn despawn_leds(
     query: Query<Entity, With<Led>>,
 ) {
     for _ in despawn_ev.read() {
+        info!("Despawning all LEDs");
         for entity in query.iter() {
             commands.entity(entity).despawn();
         }

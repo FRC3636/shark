@@ -66,10 +66,11 @@ impl<'a> From<&'a [Point]> for PointsExport<'a> {
 
 impl From<Vec<Point>> for PointsExport<'_> {
     fn from(value: Vec<Point>) -> Self {
+        let arr = value.into_boxed_slice();
         Self {
             _marker: std::marker::PhantomData,
-            points: value.as_ptr(),
-            len: value.len(),
+            points: arr.as_ptr(),
+            len: arr.len(),
         }
     }
 }

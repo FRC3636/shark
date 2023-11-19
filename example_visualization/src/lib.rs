@@ -1,6 +1,6 @@
 use palette::{IntoColor, Srgb};
 use shark::{
-    point::{Point, primitives::Line},
+    point::{primitives::line, Point},
     shader::{
         primitives::{checkerboard, color, off},
         FragOne, FragThree, Fragment, IntoShader, Shader, ShaderExt,
@@ -25,7 +25,7 @@ pub extern "C" fn vis_exports() -> VisualizationExports<'static, FragThree> {
         2.0,
     );
     // let shader = off();
-    let points = vec![Point::new(0.0, 1.0, 0.0)].into_iter();
+    let points = line(Point::new(0.0, 0.0, 0.0), Point::new(3.0, 3.0, 0.0), 15);
 
     VisualizationExports::new(shader, points)
 }

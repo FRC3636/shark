@@ -67,9 +67,8 @@ fn handle_compile_events(
     mut despawn_writer: EventWriter<DespawnLedsEvent>,
     mut spawn_writer: EventWriter<SpawnLedsEvent>,
 ) {
-    despawn_writer.send(DespawnLedsEvent);
-
     for _ in compile_ev.read() {
+        despawn_writer.send(DespawnLedsEvent);
         let library_path = match compile_shader(&state) {
             Err(e) => {
                 error_writer.send(e);

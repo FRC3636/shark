@@ -23,7 +23,7 @@ fn main() {
         ))
         .add_systems(Startup, camera_setup)
         .insert_resource(PlayBackState {
-            paused: true,
+            paused: false,
             fps: 20.0,
         })
         .insert_non_send_resource(SystemFilePicker::new_from_main_thread())
