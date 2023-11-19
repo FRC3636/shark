@@ -7,13 +7,11 @@ use bevy::prelude::*;
 use palette::LinSrgb;
 use rand::Rng;
 
-use shark::{
-    shader::{FragThree, Fragment, ShaderExport},
-    VisualizationExports,
-};
+use shark::shader::{FragThree, Fragment};
+use shark_visualizer_interface::VisualizationExports;
 
 use crate::{
-    ui::ErrorMessageEvent, user_config::UserConfigState, visualization::VisualizationState,
+    ui::ErrorMessageEvent, user_config::{UserConfigState, DespawnLedsEvent, SpawnLedsEvent}, visualization::VisualizationState,
 };
 
 #[derive(Event)]
@@ -39,20 +37,26 @@ impl Plugin for ShaderCompilerPlugin {
     }
 }
 
-pub struct ShaderExportWrapper<'a, F: Fragment + Send> {
-    inner: Mutex<ShaderExport<'a, F>>,
+pub struct VisualizationExportsWrapper<'a, F: Fragment + Send> {
+    inner: Mutex<VisualizationExports<'a, F>>,
+}
+impl<F: Fragment + Send> VisualizationExportsWrapper<'_, F> {
+    pub fn points(&self) -> Vec<shark::point::Point> {
+        let inner = self.inner.lock().unwrap();
+        inner.points.as_slice().to_vec()
+    }
 }
 
-impl<F: Fragment + Send> shark::shader::Shader<F> for ShaderExportWrapper<'static, F> {
+impl<F: Fragment + Send> shark::shader::Shader<F> for VisualizationExportsWrapper<'static, F> {
     type Output = LinSrgb<f64>;
 
     fn shade(&self, frag: F) -> Self::Output {
         let inner = self.inner.lock().unwrap();
-        inner.shade(frag)
+        inner.shader.shade(frag)
     }
 }
 
-type ShaderExportFn<F> = unsafe extern "C" fn() -> VisualizationExports<F>;
+type ShaderExportFn<F> = unsafe extern "C" fn() -> VisualizationExports<'static, F>;
 
 fn handle_compile_events(
     mut compile_ev: EventReader<CompileShaderEvent>,
@@ -60,7 +64,11 @@ fn handle_compile_events(
     mut state: ResMut<ShaderCompilerState>,
     user_config: Res<UserConfigState>,
     mut visualization: ResMut<VisualizationState>,
+    mut despawn_writer: EventWriter<DespawnLedsEvent>,
+    mut spawn_writer: EventWriter<SpawnLedsEvent>,
 ) {
+    despawn_writer.send(DespawnLedsEvent);
+
     for _ in compile_ev.read() {
         let library_path = match compile_shader(&state) {
             Err(e) => {
@@ -84,9 +92,9 @@ fn handle_compile_events(
 
         let config = &user_config.config.as_ref().unwrap().visualization;
 
-        let symbol_name = config.shader_export_name.as_bytes().to_vec();
+        let symbol_name = config.exports_fn_identifier.as_bytes().to_vec();
 
-        let shader = unsafe {
+        let exports = unsafe {
             match config.fragment {
                 // Small dimensional fragments are not supported yet
                 crate::user_config::FragType::FragOne | crate::user_config::FragType::FragTwo => {
@@ -103,16 +111,17 @@ fn handle_compile_events(
                             }
                         };
 
-                    Box::new(ShaderExportWrapper {
-                        inner: Mutex::new(func().shader),
-                    })
+                    VisualizationExportsWrapper {
+                        inner: Mutex::new(func()),
+                    }
                 }
             }
         };
 
         info!("Successfully created shader!");
-        drop(visualization.shader.replace(shader));
-        info!("Replaced old shader");
+        drop(visualization.exports.replace(exports));
+        spawn_writer.send(SpawnLedsEvent);
+        info!("Replaced old shader and led points");
         drop(state.lib.replace(lib));
         info!("Unloaded old library");
     }

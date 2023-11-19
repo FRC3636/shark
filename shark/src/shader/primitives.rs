@@ -1,6 +1,5 @@
 use num::ToPrimitive;
 use palette::{FromColor, Hsl, IntoColor, LinSrgb, Mix, RgbHue, ShiftHue};
-use rand::Rng;
 
 use crate::shader::{FragOne, FragThree, FragTwo, Fragment, Shader};
 
@@ -174,12 +173,11 @@ impl<F: Fragment> Shader<F> for Random<F> {
     type Output = LinSrgb<f64>;
 
     fn shade(&self, _frag: F) -> Self::Output {
-        let mut rng = rand::thread_rng();
         // Okhsl because it's the easiest to generate random colors with
         Hsl::new(
-            RgbHue::new(rng.gen_range(0.0..360.0)),
-            rng.gen_range(0.0..1.0),
-            rng.gen_range(0.0..1.0),
+            RgbHue::new(fastrand::f64() * 360.0),
+            fastrand::f64(),
+            fastrand::f64(),
         )
         .into_color()
     }

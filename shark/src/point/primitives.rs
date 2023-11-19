@@ -30,3 +30,7 @@ impl Iterator for Line {
         }
     }
 }
+
+pub fn line(a: Point, b: Point, num_points: usize) -> Line {
+    Line::new(a, b, num_points)
+}

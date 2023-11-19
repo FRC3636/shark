@@ -1,21 +1,3 @@
 [visualization]
 fragment = "FragThree"
-
-[visualization.leds]
-leds = [
-    {x=-2, y=0, z=0},
-    {x=-1, y=0, z=0},
-    {x=0, y=0, z=0},
-    {x=1, y=0, z=0},
-    {x=2, y=0, z=0},
-    {x=-2, y=1, z=0},
-    {x=-1, y=1, z=0},
-    {x=0, y=1, z=0},
-    {x=1, y=1, z=0},
-    {x=2, y=1, z=0},
-    {x=-2, y=2, z=0},
-    {x=-1, y=2, z=0},
-    {x=0, y=2, z=0},
-    {x=1, y=2, z=0},
-    {x=2, y=2, z=0},
-]
+exports_fn_identifier = "vis_exports"

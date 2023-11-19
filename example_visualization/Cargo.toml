@@ -7,4 +7,5 @@ edition = "2021"
 
 [dependencies]
 shark = { path = "../shark" }
+shark-visualizer-interface = { path = "../shark-visualizer-interface" }
 palette = "0.7.0"

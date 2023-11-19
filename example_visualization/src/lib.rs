@@ -1,16 +1,15 @@
 use palette::{IntoColor, Srgb};
 use shark::{
-    point::Point,
+    point::{Point, primitives::Line},
     shader::{
-        create_shader_export,
         primitives::{checkerboard, color, off},
         FragOne, FragThree, Fragment, IntoShader, Shader, ShaderExt,
     },
-    VisualizationExports,
 };
+use shark_visualizer_interface::VisualizationExports;
 
 #[no_mangle]
-pub extern "C" fn shader_export() -> VisualizationExports<FragThree> {
+pub extern "C" fn vis_exports() -> VisualizationExports<'static, FragThree> {
     let flip_flop = (|frag: FragOne| {
         if frag.time() % 2.0 < 1.0 {
             Srgb::new(1.0, 0.0, 0.0)
@@ -26,7 +25,7 @@ pub extern "C" fn shader_export() -> VisualizationExports<FragThree> {
         2.0,
     );
     // let shader = off();
-    let points: &'static [Point] = Box::leak(Box::new([]));
+    let points = vec![Point::new(0.0, 1.0, 0.0)].into_iter();
 
-    VisualizationExports::new(create_shader_export(shader), points.into())
+    VisualizationExports::new(shader, points)
 }

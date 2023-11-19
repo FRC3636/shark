@@ -50,41 +50,6 @@ impl<F: Fragment, O: IntoColor<LinSrgb<f64>>> Shader<F> for dyn Fn(F) -> O {
     }
 }
 
-#[repr(C)]
-pub struct ShaderExport<'a, F: Fragment> {
-    shader: *const (),
-    f: &'a extern "C" fn(*const (), F) -> LinSrgb<f64>,
-}
-// f will always be Send even when F isn't, and the only way to create shader is when it points to a static shader implementing Send
-unsafe impl<'a, F: Fragment + Send> Send for ShaderExport<'a, F> {}
-
-pub fn create_shader_export<S: Shader<F> + 'static + Send, F: Fragment>(
-    shader: S,
-) -> ShaderExport<'static, F> {
-    let shader_ptr = (Box::leak(Box::new(shader)) as *const S).cast();
-
-    extern "C" fn shader_export_fn<S: Shader<F>, F: Fragment>(
-        shader: *const (),
-        frag: F,
-    ) -> LinSrgb<f64> {
-        let shader = unsafe { &*(shader.cast::<S>()) };
-        shader.shade(frag).into_color()
-    }
-
-    ShaderExport {
-        shader: shader_ptr,
-        f: &(shader_export_fn::<S, F> as extern "C" fn(*const (), F) -> LinSrgb<f64>),
-    }
-}
-
-impl<F: Fragment> Shader<F> for ShaderExport<'static, F> {
-    type Output = LinSrgb<f64>;
-
-    fn shade(&self, frag: F) -> Self::Output {
-        (self.f)(self.shader, frag)
-    }
-}
-
 pub trait Fragment: Clone + Copy + std::fmt::Debug {
     fn time(&self) -> f64;
     fn time_mut(&mut self) -> &mut f64;
@@ -93,6 +58,7 @@ pub trait Fragment: Clone + Copy + std::fmt::Debug {
 }
 
 #[derive(Clone, Copy, Debug)]
+#[repr(C)]
 pub struct FragOne {
     pub pos: f64,
     pub time: f64,
@@ -116,6 +82,7 @@ impl Fragment for FragOne {
 }
 
 #[derive(Clone, Copy, Debug)]
+#[repr(C)]
 pub struct FragTwo {
     pub pos: [f64; 2],
     pub time: f64,
@@ -139,6 +106,7 @@ impl Fragment for FragTwo {
 }
 
 #[derive(Clone, Copy, Debug)]
+#[repr(C)]
 pub struct FragThree {
     pub pos: [f64; 3],
     pub time: f64,

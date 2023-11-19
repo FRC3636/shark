@@ -1,10 +1,10 @@
 use bevy::input::mouse::MouseMotion;
 pub use bevy::{prelude::*, window::CursorGrabMode};
-use palette::LinSrgb;
-use shark::shader::FragThree;
+use shark::shader::{FragThree, Shader};
 
 use crate::{
-    user_config::{DespawnLedsEvent, SpawnLedsEvent, UserConfigState},
+    shader_compiler::VisualizationExportsWrapper,
+    user_config::{DespawnLedsEvent, SpawnLedsEvent},
     PlayBackState,
 };
 
@@ -13,7 +13,7 @@ pub struct VisualizationPlugin;
 impl Plugin for VisualizationPlugin {
     fn build(&self, app: &mut App) {
         app.insert_resource(VisualizationState {
-            shader: None,
+            exports: None,
             fps_timer: Timer::from_seconds(0.0, TimerMode::Once),
         })
         .add_systems(Startup, initialize_visualization)
@@ -33,8 +33,7 @@ impl Plugin for VisualizationPlugin {
 
 #[derive(Resource)]
 pub struct VisualizationState {
-    pub shader:
-        Option<Box<dyn shark::shader::Shader<FragThree, Output = LinSrgb<f64>> + Send + Sync>>,
+    pub exports: Option<VisualizationExportsWrapper<'static, FragThree>>,
     pub fps_timer: Timer,
 }
 
@@ -75,7 +74,7 @@ pub struct Led;
 fn spawn_leds(
     mut commands: Commands,
     mut spawn_ev: EventReader<SpawnLedsEvent>,
-    user_config: Res<UserConfigState>,
+    state: Res<VisualizationState>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
     query: Query<Entity, With<LedRoot>>,
@@ -83,15 +82,8 @@ fn spawn_leds(
     let led_root = query.single();
 
     for _ in spawn_ev.read() {
-        for led in user_config
-            .config
-            .as_ref()
-            .unwrap()
-            .visualization
-            .leds
-            .leds
-            .iter()
-        {
+        for led in state.exports.as_ref().unwrap().points() {
+            info!("Spawning LED at {:?}", led);
             commands
                 .spawn((
                     PbrBundle {
@@ -102,7 +94,7 @@ fn spawn_leds(
                             }
                             .into(),
                         ),
-                        transform: Transform::from_xyz(led.x, led.y, led.z),
+                        transform: Transform::from_xyz(led.x as _, led.y as _, led.z as _),
                         material: materials.add(Color::BLACK.into()),
                         ..default()
                     },
@@ -155,13 +147,13 @@ fn step_visualization(
     mut step_reader: EventReader<StepEvent>,
 ) {
     for _ in step_reader.read() {
-        if state.shader.is_none() {
+        if state.exports.is_none() {
             info!("visualization not running because shader is not set");
             info!("Press the Compile button!");
             return;
         }
 
-        let shader = state.shader.as_ref().unwrap();
+        let shader = state.exports.as_ref().unwrap();
 
         for (mut material, transform) in query.iter_mut() {
             let color = shader.shade(FragThree {

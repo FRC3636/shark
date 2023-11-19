@@ -9,29 +9,9 @@ pub struct Point {
     pub z: f64,
 }
 
-#[repr(C)]
-pub struct Points<'a> {
-    _marker: std::marker::PhantomData<&'a Point>,
-    points: *const Point,
-}
-
-impl<'a> From<&'a[Point]> for Points<'a> {
-    fn from(points: &'a [Point]) -> Self {
-        Self {
-            _marker: std::marker::PhantomData,
-            points: points.as_ptr(),
-        }
-    }
-}
-
-// This probably shouldn't be used outside of exporting to the visualizer.
-impl FromIterator<Point> for Points<'static> {
-    fn from_iter<T: IntoIterator<Item = Point>>(iter: T) -> Self {
-        let points = Box::leak(Box::new(iter.into_iter().collect::<Vec<_>>())).as_ptr();
-        Self {
-            _marker: std::marker::PhantomData,
-            points,
-        }
+impl Point {
+    pub fn new(x: f64, y: f64, z: f64) -> Self {
+        Self { x, y, z }
     }
 }
 
@@ -101,6 +81,6 @@ pub mod tests {
             2,
         );
 
-        let points: Points<'static> = points.collect();
+        let points: Vec<Point> = points.collect();
     }
 }

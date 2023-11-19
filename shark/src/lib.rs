@@ -1,20 +1,5 @@
-use point::Points;
-use shader::{ShaderExport, Fragment};
-
-pub mod shader;
 pub mod point;
-
-#[repr(C)]
-pub struct VisualizationExports<F: Fragment + 'static> {
-    pub shader: ShaderExport<'static, F>,
-    pub points: Points<'static>,
-}
-
-impl<F: Fragment> VisualizationExports<F> {
-    pub fn new(shader: ShaderExport<'static, F>, points: Points<'static>) -> Self {
-        Self { shader, points }
-    }
-}
+pub mod shader;
 
 #[cfg(test)]
 mod tests {
