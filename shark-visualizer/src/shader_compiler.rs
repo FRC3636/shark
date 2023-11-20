@@ -11,7 +11,7 @@ use shark::shader::{FragThree, Fragment};
 use shark_visualizer_interface::VisualizationExports;
 
 use crate::{
-    ui::ErrorMessageEvent, user_config::{UserConfigState, DespawnLedsEvent, SpawnLedsEvent}, visualization::VisualizationState,
+    ui::ErrorMessageEvent, user_config::{UserConfigState, RespawnLedsEvent}, visualization::VisualizationState,
 };
 
 #[derive(Event)]
@@ -64,11 +64,9 @@ fn handle_compile_events(
     mut state: ResMut<ShaderCompilerState>,
     user_config: Res<UserConfigState>,
     mut visualization: ResMut<VisualizationState>,
-    mut despawn_writer: EventWriter<DespawnLedsEvent>,
-    mut spawn_writer: EventWriter<SpawnLedsEvent>,
+    mut respawn_writer: EventWriter<RespawnLedsEvent>,
 ) {
     for _ in compile_ev.read() {
-        despawn_writer.send(DespawnLedsEvent);
         let library_path = match compile_shader(&state) {
             Err(e) => {
                 error_writer.send(e);
@@ -119,7 +117,7 @@ fn handle_compile_events(
 
         info!("Successfully created shader!");
         drop(visualization.exports.replace(exports));
-        spawn_writer.send(SpawnLedsEvent);
+        respawn_writer.send(RespawnLedsEvent);
         info!("Replaced old shader and led points");
         drop(state.lib.replace(lib));
         info!("Unloaded old library");

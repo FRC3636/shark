@@ -8,8 +8,7 @@ impl Plugin for UserConfigPlugin {
     fn build(&self, app: &mut App) {
         app.add_systems(Startup, initialize_user_config)
             .add_systems(Update, load_user_config)
-            .add_event::<SpawnLedsEvent>()
-            .add_event::<DespawnLedsEvent>();
+            .add_event::<RespawnLedsEvent>();
     }
 }
 
@@ -42,10 +41,7 @@ pub fn initialize_user_config(mut commands: Commands) {
 }
 
 #[derive(Event)]
-pub struct SpawnLedsEvent;
-
-#[derive(Event)]
-pub struct DespawnLedsEvent;
+pub struct RespawnLedsEvent;
 
 pub fn load_user_config(
     mut ev_reader: EventReader<ManifestPathSetEvent>,

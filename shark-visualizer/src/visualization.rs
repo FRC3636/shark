@@ -4,7 +4,7 @@ use shark::shader::{FragThree, Shader};
 
 use crate::{
     shader_compiler::VisualizationExportsWrapper,
-    user_config::{DespawnLedsEvent, SpawnLedsEvent},
+    user_config::RespawnLedsEvent,
     PlayBackState,
 };
 
@@ -21,8 +21,7 @@ impl Plugin for VisualizationPlugin {
             Update,
             (
                 rotate_visualization,
-                spawn_leds,
-                despawn_leds,
+                respawn_leds,
                 update_leds.run_if(|pb: Res<PlayBackState>| !pb.paused),
                 step_visualization,
             ),
@@ -71,17 +70,24 @@ fn rotate_visualization(
 #[derive(Component)]
 pub struct Led;
 
-fn spawn_leds(
+fn respawn_leds(
     mut commands: Commands,
-    mut spawn_ev: EventReader<SpawnLedsEvent>,
+    mut respawn_ev: EventReader<RespawnLedsEvent>,
     state: Res<VisualizationState>,
     mut meshes: ResMut<Assets<Mesh>>,
     mut materials: ResMut<Assets<StandardMaterial>>,
-    query: Query<Entity, With<LedRoot>>,
+    root: Query<Entity, With<LedRoot>>,
+    leds: Query<Entity, With<Led>>,
 ) {
-    let led_root = query.single();
-
-    for _ in spawn_ev.read() {
+    for _ in respawn_ev.read() {
+        info!("Despawning all LEDs");
+        for entity in leds.iter() {
+            commands.entity(entity).despawn();
+        }
+    
+    
+        info!("Spawning LEDs");
+        let led_root = root.single();
         for led in state.exports.as_ref().unwrap().points() {
             commands
                 .spawn((
@@ -100,19 +106,6 @@ fn spawn_leds(
                     Led,
                 ))
                 .set_parent(led_root);
-        }
-    }
-}
-
-fn despawn_leds(
-    mut commands: Commands,
-    mut despawn_ev: EventReader<DespawnLedsEvent>,
-    query: Query<Entity, With<Led>>,
-) {
-    for _ in despawn_ev.read() {
-        info!("Despawning all LEDs");
-        for entity in query.iter() {
-            commands.entity(entity).despawn();
         }
     }
 }
