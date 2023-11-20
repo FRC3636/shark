@@ -2,11 +2,11 @@ pub mod primitives;
 
 use core::slice;
 
+use palette::{IntoColor, LinSrgb};
 use primitives::{
     checkerboard, extrude, mix, mod_position, mod_time, rotate_hue, Checkerboard, Extrude,
     Interpolate, ModPosition, ModTime, RotateHue,
 };
-use palette::{IntoColor, LinSrgb};
 
 pub trait Shader<F: Fragment> {
     type Output: IntoColor<LinSrgb<f64>>;

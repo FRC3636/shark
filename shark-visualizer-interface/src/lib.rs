@@ -1,8 +1,8 @@
 use palette::{IntoColor, LinSrgb};
 use shark::point::Point;
-use shark::shader::{Fragment, Shader};
 #[cfg(target_arch = "wasm32")]
 use shark::shader::FragThree;
+use shark::shader::{Fragment, Shader};
 
 #[repr(C)]
 #[derive(Clone)]

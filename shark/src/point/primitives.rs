@@ -21,8 +21,12 @@ impl Iterator for Line {
     type Item = Point;
 
     fn next(&mut self) -> Option<Self::Item> {
+        if self.num_points == 0 {
+            return None;
+        }
+
         if self.current_point < self.num_points {
-            let t = self.current_point as f64 / self.num_points as f64;
+            let t = self.current_point as f64 / (self.num_points - 1) as f64;
             self.current_point += 1;
             Some((1.0 - t) * self.a + t * self.b)
         } else {

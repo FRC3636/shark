@@ -3,9 +3,7 @@ pub use bevy::{prelude::*, window::CursorGrabMode};
 use shark::shader::{FragThree, Shader};
 
 use crate::{
-    shader_compiler::VisualizationExportsWrapper,
-    user_config::RespawnLedsEvent,
-    PlayBackState,
+    shader_compiler::VisualizationExportsWrapper, user_config::RespawnLedsEvent, PlayBackState,
 };
 
 pub struct VisualizationPlugin;
@@ -84,8 +82,7 @@ fn respawn_leds(
         for entity in leds.iter() {
             commands.entity(entity).despawn();
         }
-    
-    
+
         info!("Spawning LEDs");
         let led_root = root.single();
         for led in state.exports.as_ref().unwrap().points() {

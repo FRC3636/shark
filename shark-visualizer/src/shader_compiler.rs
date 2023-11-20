@@ -11,7 +11,9 @@ use shark::shader::{FragThree, Fragment};
 use shark_visualizer_interface::VisualizationExports;
 
 use crate::{
-    ui::ErrorMessageEvent, user_config::{UserConfigState, RespawnLedsEvent}, visualization::VisualizationState,
+    ui::ErrorMessageEvent,
+    user_config::{RespawnLedsEvent, UserConfigState},
+    visualization::VisualizationState,
 };
 
 #[derive(Event)]
