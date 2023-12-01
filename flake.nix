@@ -4,8 +4,8 @@
   outputs = { nixpkgs, flake-utils, ... }:
     (flake-utils.lib.eachDefaultSystem (system:
       let pkgs = nixpkgs.legacyPackages.${system};
-      in rec {
-        devShell = pkgs.mkShell rec {
+      in {
+        devShell = pkgs.mkShell {
           name = "devShell";
           buildInputs = with pkgs; [
             openssl

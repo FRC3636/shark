@@ -5,7 +5,18 @@ edition = "2021"
 
 [dependencies]
 clap = { version = "4.4.7", features = ["derive"] }
-bevy = { version = "0.12.0", features = ["wayland"] }
+bevy = { version = "0.12.0", default_features = false, features = [
+    "wayland",
+    "x11",
+    "default_font",
+    "bevy_winit",
+    "bevy_core_pipeline",
+    "bevy_pbr",
+    "bevy_render",
+    "bevy_ui",
+    "bevy_text",
+    "multi-threaded",
+] }
 image = "0.24.7"
 palette = "0.7.3"
 shark = { path = "../shark" }
