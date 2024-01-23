@@ -1,5 +1,5 @@
 use num::ToPrimitive;
-use palette::{FromColor, Hsl, IntoColor, LinSrgb, Mix, RgbHue, ShiftHue, Srgb};
+use palette::{FromColor, Hsl, IntoColor, LinSrgb, Mix, ShiftHue, Srgb, Okhsl};
 
 use crate::shader::{FragOne, FragThree, FragTwo, Fragment, Shader};
 
@@ -330,11 +330,11 @@ pub struct Rainbow<F: Fragment, S: Fn(F) -> f64> {
     selector: S,
 }
 impl<F: Fragment, S: Fn(F) -> f64> Shader<F> for Rainbow<F, S> {
-    type Output = LinSrgb<f64>;
+    type Output = Okhsl<f64>;
 
     fn shade(&self, frag: F) -> Self::Output {
         let t = (self.selector)(frag);
-        Hsl::new(t % 360.0, 1.0, 0.5).into_color()
+        Okhsl::new(t % 360.0, 1.0, 0.5)
     }
 }
 
@@ -349,5 +349,35 @@ pub fn time_rainbow<F: Fragment>() -> Rainbow<F, impl Fn(F) -> f64> {
     Rainbow {
         _marker: std::marker::PhantomData,
         selector: |frag| frag.time(),
+    }
+}
+
+pub fn one_dimensional_position_rainbow() -> Rainbow<FragOne, impl Fn(FragOne) -> f64> {
+    Rainbow {
+        _marker: std::marker::PhantomData,
+        selector: |frag| frag.pos,
+    }
+}
+
+pub struct ScaleTime<F: Fragment, S: Shader<F>> {
+    _marker: std::marker::PhantomData<F>,
+    shader: S,
+    scale: f64,
+}
+
+impl<F: Fragment, S: Shader<F>> Shader<F> for ScaleTime<F, S> {
+    type Output = S::Output;
+
+    fn shade(&self, mut frag: F) -> Self::Output {
+        *frag.time_mut() *= self.scale;
+        self.shader.shade(frag)
+    }
+}
+
+pub fn scale_time<F: Fragment, S: Shader<F>>(shader: S, scale: f64) -> ScaleTime<F, S> {
+    ScaleTime {
+        _marker: std::marker::PhantomData,
+        shader,
+        scale,
     }
 }

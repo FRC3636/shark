@@ -8,6 +8,8 @@ use primitives::{
     Interpolate, ModPosition, ModTime, RotateHue,
 };
 
+use self::primitives::{ScaleTime, scale_time};
+
 pub trait Shader<F: Fragment> {
     type Output: IntoColor<LinSrgb<f64>>;
 
@@ -155,6 +157,10 @@ pub trait ShaderExt<F: Fragment>: Shader<F> + Sized {
 
     fn extrude(self) -> Extrude<F, Self> {
         extrude(self)
+    }
+
+    fn scale_time(self, factor: f64) -> ScaleTime<F, Self> {
+        scale_time(self, factor)
     }
 }
 impl<F: Fragment, T> ShaderExt<F> for T where T: Shader<F> {}
