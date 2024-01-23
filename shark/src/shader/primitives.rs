@@ -334,7 +334,7 @@ impl<F: Fragment, S: Fn(F) -> f64> Shader<F> for Rainbow<F, S> {
 
     fn shade(&self, frag: F) -> Self::Output {
         let t = (self.selector)(frag);
-        Hsl::new(t % 360.0, 1.0, 1.0).into_color()
+        Hsl::new(t % 360.0, 1.0, 0.5).into_color()
     }
 }
 
