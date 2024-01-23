@@ -1,5 +1,5 @@
 use num::ToPrimitive;
-use palette::{FromColor, Hsl, IntoColor, LinSrgb, Mix, RgbHue, ShiftHue};
+use palette::{FromColor, Hsl, IntoColor, LinSrgb, Mix, RgbHue, ShiftHue, Srgb};
 
 use crate::shader::{FragOne, FragThree, FragTwo, Fragment, Shader};
 
@@ -173,13 +173,11 @@ impl<F: Fragment> Shader<F> for Random<F> {
     type Output = LinSrgb<f64>;
 
     fn shade(&self, _frag: F) -> Self::Output {
-        // Okhsl because it's the easiest to generate random colors with
-        Hsl::new(
-            RgbHue::new(fastrand::f64() * 360.0),
+        Srgb::new(
             fastrand::f64(),
             fastrand::f64(),
-        )
-        .into_color()
+            fastrand::f64(),
+        ).into_color()
     }
 }
 
@@ -324,5 +322,32 @@ pub fn extrude<F: Fragment, S: Shader<F>>(shader: S) -> Extrude<F, S> {
     Extrude {
         _marker: std::marker::PhantomData,
         shader,
+    }
+}
+
+pub struct Rainbow<F: Fragment, S: Fn(F) -> f64> {
+    _marker: std::marker::PhantomData<F>,
+    selector: S,
+}
+impl<F: Fragment, S: Fn(F) -> f64> Shader<F> for Rainbow<F, S> {
+    type Output = LinSrgb<f64>;
+
+    fn shade(&self, frag: F) -> Self::Output {
+        let t = (self.selector)(frag);
+        Hsl::new(t % 360.0, 1.0, 1.0).into_color()
+    }
+}
+
+pub fn rainbow<F: Fragment, S: Fn(F) -> f64>(selector: S) -> Rainbow<F, S> {
+    Rainbow {
+        _marker: std::marker::PhantomData,
+        selector,
+    }
+}
+
+pub fn time_rainbow<F: Fragment>() -> Rainbow<F, impl Fn(F) -> f64> {
+    Rainbow {
+        _marker: std::marker::PhantomData,
+        selector: |frag| frag.time(),
     }
 }
