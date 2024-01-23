@@ -4,11 +4,11 @@ use core::slice;
 
 use palette::{IntoColor, LinSrgb};
 use primitives::{
-    checkerboard, extrude, mix, mod_position, mod_time, rotate_hue, Checkerboard, Extrude,
-    Interpolate, ModPosition, ModTime, RotateHue,
+    checkerboard, extrude, mix, mod_position, mod_time, rotate_hue, translate_position,
+    Checkerboard, Extrude, Interpolate, ModPosition, ModTime, RotateHue,
 };
 
-use self::primitives::{ScaleTime, scale_time};
+use self::primitives::{scale_time, ScaleTime, TranslatePosition};
 
 pub trait Shader<F: Fragment> {
     type Output: IntoColor<LinSrgb<f64>>;
@@ -161,6 +161,10 @@ pub trait ShaderExt<F: Fragment>: Shader<F> + Sized {
 
     fn scale_time(self, factor: f64) -> ScaleTime<F, Self> {
         scale_time(self, factor)
+    }
+
+    fn translate_position<O>(self, offset: O) -> TranslatePosition<F, Self, O> {
+        translate_position(self, offset)
     }
 }
 impl<F: Fragment, T> ShaderExt<F> for T where T: Shader<F> {}

@@ -1,5 +1,5 @@
 use num::ToPrimitive;
-use palette::{FromColor, Hsl, IntoColor, LinSrgb, Mix, ShiftHue, Srgb, Okhsl};
+use palette::{FromColor, Hsl, IntoColor, LinSrgb, Mix, Okhsl, ShiftHue, Srgb};
 
 use crate::shader::{FragOne, FragThree, FragTwo, Fragment, Shader};
 
@@ -173,11 +173,7 @@ impl<F: Fragment> Shader<F> for Random<F> {
     type Output = LinSrgb<f64>;
 
     fn shade(&self, _frag: F) -> Self::Output {
-        Srgb::new(
-            fastrand::f64(),
-            fastrand::f64(),
-            fastrand::f64(),
-        ).into_color()
+        Srgb::new(fastrand::f64(), fastrand::f64(), fastrand::f64()).into_color()
     }
 }
 
@@ -379,5 +375,52 @@ pub fn scale_time<F: Fragment, S: Shader<F>>(shader: S, scale: f64) -> ScaleTime
         _marker: std::marker::PhantomData,
         shader,
         scale,
+    }
+}
+
+pub struct TranslatePosition<F: Fragment, S: Shader<F>, O> {
+    _marker: std::marker::PhantomData<F>,
+    shader: S,
+    offset: O,
+}
+
+impl<S: Shader<FragOne>> Shader<FragOne> for TranslatePosition<FragOne, S, f64> {
+    type Output = S::Output;
+
+    fn shade(&self, mut frag: FragOne) -> Self::Output {
+        frag.pos += self.offset;
+        self.shader.shade(frag)
+    }
+}
+
+impl<S: Shader<FragTwo>> Shader<FragTwo> for TranslatePosition<FragTwo, S, [f64; 2]> {
+    type Output = S::Output;
+
+    fn shade(&self, mut frag: FragTwo) -> Self::Output {
+        frag.pos[0] += self.offset[0];
+        frag.pos[1] += self.offset[1];
+        self.shader.shade(frag)
+    }
+}
+
+impl<S: Shader<FragThree>> Shader<FragThree> for TranslatePosition<FragThree, S, [f64; 3]> {
+    type Output = S::Output;
+
+    fn shade(&self, mut frag: FragThree) -> Self::Output {
+        frag.pos[0] += self.offset[0];
+        frag.pos[1] += self.offset[1];
+        frag.pos[2] += self.offset[2];
+        self.shader.shade(frag)
+    }
+}
+
+pub fn translate_position<F: Fragment, O, S: Shader<F>>(
+    shader: S,
+    offset: O,
+) -> TranslatePosition<F, S, O> {
+    TranslatePosition {
+        _marker: std::marker::PhantomData,
+        shader,
+        offset,
     }
 }
