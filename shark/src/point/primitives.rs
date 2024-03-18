@@ -1,5 +1,6 @@
 use super::Point;
 
+#[derive(Debug, Clone)]
 pub struct Line {
     pub a: Point,
     pub b: Point,

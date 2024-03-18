@@ -378,6 +378,32 @@ pub fn scale_time<F: Fragment, S: Shader<F>>(shader: S, scale: f64) -> ScaleTime
     }
 }
 
+pub struct ScalePosition<F: Fragment, S: Shader<F>> {
+    _marker: std::marker::PhantomData<F>,
+    shader: S,
+    scale: f64,
+}
+
+impl<F: Fragment, S: Shader<F>> Shader<F> for ScalePosition<F, S> {
+    type Output = S::Output;
+
+    fn shade(&self, mut frag: F) -> Self::Output {
+        let position = frag.pos_mut();
+        for part in 0..position.len() {
+            position[part] *= self.scale;
+        }
+        self.shader.shade(frag)
+    }
+}
+
+pub fn scale_position<F: Fragment, S: Shader<F>>(shader: S, scale: f64) -> ScalePosition<F, S> {
+    ScalePosition {
+        _marker: std::marker::PhantomData,
+        shader,
+        scale,
+    }
+}
+
 pub struct TranslatePosition<F: Fragment, S: Shader<F>, O> {
     _marker: std::marker::PhantomData<F>,
     shader: S,
@@ -422,5 +448,53 @@ pub fn translate_position<F: Fragment, O, S: Shader<F>>(
         _marker: std::marker::PhantomData,
         shader,
         offset,
+    }
+}
+
+pub struct Add<L: Shader<F>, R: Shader<F>, F: Fragment> {
+    _marker: std::marker::PhantomData<F>,
+    left: L,
+    right: R,
+}
+
+impl<L: Shader<F>, R: Shader<F>, F: Fragment> Shader<F> for Add<L, R, F> {
+    type Output = LinSrgb<f64>;
+
+    fn shade(&self, frag: F) -> Self::Output {
+        let lhs = self.left.shade(frag).into_color();
+        let rhs = self.right.shade(frag).into_color();
+        lhs + rhs
+    }
+}
+
+pub fn add<L: Shader<F>, R: Shader<F>, F: Fragment>(left: L, right: R) -> Add<L, R, F> {
+    Add {
+        _marker: std::marker::PhantomData,
+        left,
+        right,
+    }
+}
+
+pub struct Multiply<L: Shader<F>, R: Shader<F>, F: Fragment> {
+    _marker: std::marker::PhantomData<F>,
+    left: L,
+    right: R,
+}
+
+impl<L: Shader<F>, R: Shader<F>, F: Fragment> Shader<F> for Multiply<L, R, F> {
+    type Output = LinSrgb<f64>;
+
+    fn shade(&self, frag: F) -> Self::Output {
+        let lhs = self.left.shade(frag).into_color();
+        let rhs = self.right.shade(frag).into_color();
+        lhs * rhs
+    }
+}
+
+pub fn multiply<L: Shader<F>, R: Shader<F>, F: Fragment>(left: L, right: R) -> Multiply<L, R, F> {
+    Multiply {
+        _marker: std::marker::PhantomData,
+        left,
+        right,
     }
 }
