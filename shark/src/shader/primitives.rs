@@ -48,7 +48,7 @@ pub fn color<F: Fragment>(color: impl IntoColor<LinSrgb<f64>>) -> Color<F> {
 pub struct Interpolate<S: Shader<F>, E: Shader<F>, F: Fragment> {
     start: S,
     end: E,
-    interpolator: Box<dyn Fn(F) -> f64 + Send>,
+    interpolator: Box<dyn Fn(F) -> f64 + Send + Sync>,
 }
 impl<S: Shader<F>, E: Shader<F>, F: Fragment> Shader<F> for Interpolate<S, E, F> {
     type Output = LinSrgb<f64>;
@@ -113,7 +113,7 @@ pub fn rotate_hue<F: Fragment, S: Shader<F>>(shader: S, angle: f64) -> RotateHue
 pub fn position_gradient<
     S: Shader<FragOne>,
     E: Shader<FragOne>,
-    I: Fn(f64) -> f64 + Send + 'static,
+    I: Fn(f64) -> f64 + Send + Sync + 'static,
 >(
     start: S,
     end: E,
@@ -130,7 +130,7 @@ pub fn time_gradient<
     F: Fragment,
     S: Shader<F>,
     E: Shader<F>,
-    I: Fn(f64) -> f64 + Send + 'static,
+    I: Fn(f64) -> f64 + Send + Sync + 'static,
 >(
     start: S,
     end: E,
@@ -142,7 +142,6 @@ pub fn time_gradient<
         interpolator: Box::new(move |frag| (interpolator)(frag.time())),
     }
 }
-
 
 #[derive(Debug, Clone, Copy)]
 pub struct Checkerboard<F: Fragment, S: Shader<F>, T: Shader<F>> {
@@ -413,8 +412,8 @@ impl<F: Fragment, S: Shader<F>> Shader<F> for ScalePosition<F, S> {
 
     fn shade(&self, mut frag: F) -> Self::Output {
         let position = frag.pos_mut();
-        for part in 0..position.len() {
-            position[part] *= self.scale;
+        for part in position.iter_mut() {
+            *part *= self.scale;
         }
         self.shader.shade(frag)
     }
