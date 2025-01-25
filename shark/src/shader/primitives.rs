@@ -207,7 +207,7 @@ pub struct ModPosition<S: Shader<F>, M: ToPrimitive, F: Fragment> {
     modulo: M,
 }
 
-impl<S: Shader<FragOne>, M: ToPrimitive> Shader<FragOne> for ModPosition<S, M, FragOne> {
+impl<S: Shader<FragOne>, M: ToPrimitive + Send + Sync> Shader<FragOne> for ModPosition<S, M, FragOne> {
     type Output = S::Output;
 
     fn shade(&self, frag: FragOne) -> Self::Output {
@@ -223,7 +223,7 @@ impl<S: Shader<FragOne>, M: ToPrimitive> Shader<FragOne> for ModPosition<S, M, F
     }
 }
 
-impl<S: Shader<FragTwo>, M: ToPrimitive> Shader<FragTwo> for ModPosition<S, M, FragTwo> {
+impl<S: Shader<FragTwo>, M: ToPrimitive + Send + Sync> Shader<FragTwo> for ModPosition<S, M, FragTwo> {
     type Output = S::Output;
 
     fn shade(&self, frag: FragTwo) -> Self::Output {
@@ -240,7 +240,7 @@ impl<S: Shader<FragTwo>, M: ToPrimitive> Shader<FragTwo> for ModPosition<S, M, F
     }
 }
 
-impl<S: Shader<FragThree>, M: ToPrimitive> Shader<FragThree> for ModPosition<S, M, FragThree> {
+impl<S: Shader<FragThree>, M: ToPrimitive + Send + Sync> Shader<FragThree> for ModPosition<S, M, FragThree> {
     type Output = S::Output;
 
     fn shade(&self, frag: FragThree) -> Self::Output {
@@ -279,7 +279,7 @@ pub struct ModTime<F: Fragment, S: Shader<F>, M: ToPrimitive> {
     modulo: M,
 }
 
-impl<F: Fragment, S: Shader<F>, M: ToPrimitive> Shader<F> for ModTime<F, S, M> {
+impl<F: Fragment, S: Shader<F>, M: ToPrimitive + Send + Sync> Shader<F> for ModTime<F, S, M> {
     type Output = S::Output;
 
     fn shade(&self, mut frag: F) -> Self::Output {
@@ -342,11 +342,11 @@ pub fn extrude<F: Fragment, S: Shader<F>>(shader: S) -> Extrude<F, S> {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct Rainbow<F: Fragment, S: Fn(F) -> f64> {
+pub struct Rainbow<F: Fragment, S: Fn(F) -> f64 + Send + Sync> {
     _marker: std::marker::PhantomData<F>,
     selector: S,
 }
-impl<F: Fragment, S: Fn(F) -> f64> Shader<F> for Rainbow<F, S> {
+impl<F: Fragment, S: Fn(F) -> f64 + Send + Sync> Shader<F> for Rainbow<F, S> {
     type Output = Okhsl<f64>;
 
     fn shade(&self, frag: F) -> Self::Output {
@@ -355,7 +355,7 @@ impl<F: Fragment, S: Fn(F) -> f64> Shader<F> for Rainbow<F, S> {
     }
 }
 
-pub fn rainbow<F: Fragment, S: Fn(F) -> f64>(selector: S) -> Rainbow<F, S> {
+pub fn rainbow<F: Fragment, S: Fn(F) -> f64 + Send + Sync>(selector: S) -> Rainbow<F, S> {
     Rainbow {
         _marker: std::marker::PhantomData,
         selector,

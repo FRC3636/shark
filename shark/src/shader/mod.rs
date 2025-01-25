@@ -9,7 +9,7 @@ use primitives::{
     Multiply, RotateHue, ScalePosition, ScaleTime, TranslatePosition,
 };
 
-pub trait Shader<F: Fragment> {
+pub trait Shader<F: Fragment>: Send + Sync {
     type Output: IntoColor<LinSrgb<f64>> + Send + Sync;
 
     fn shade(&self, frag: F) -> Self::Output;
@@ -44,7 +44,7 @@ impl<I: Fragment, O: IntoColor<LinSrgb<f64>> + Send + Sync, F: Fn(I) -> O + Send
     }
 }
 
-impl<F: Fragment, O: IntoColor<LinSrgb<f64>> + Send + Sync> Shader<F> for dyn Fn(F) -> O {
+impl<F: Fragment, O: IntoColor<LinSrgb<f64>> + Send + Sync> Shader<F> for dyn Fn(F) -> O + Send + Sync {
     type Output = O;
 
     fn shade(&self, frag: F) -> Self::Output {
@@ -52,7 +52,7 @@ impl<F: Fragment, O: IntoColor<LinSrgb<f64>> + Send + Sync> Shader<F> for dyn Fn
     }
 }
 
-pub trait Fragment: Clone + Copy + std::fmt::Debug {
+pub trait Fragment: Clone + Copy + std::fmt::Debug + Send + Sync {
     fn time(&self) -> f64;
     fn time_mut(&mut self) -> &mut f64;
     fn pos(&self) -> &[f64];
