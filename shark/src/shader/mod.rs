@@ -10,7 +10,7 @@ use primitives::{
 };
 
 pub trait Shader<F: Fragment> {
-    type Output: IntoColor<LinSrgb<f64>>;
+    type Output: IntoColor<LinSrgb<f64>> + Send + Sync;
 
     fn shade(&self, frag: F) -> Self::Output;
 }
@@ -20,11 +20,12 @@ pub trait IntoShader<F: Fragment, O: IntoColor<LinSrgb<f64>>> {
     fn into_shader(self) -> Self::Shader;
 }
 
-pub struct FnShader<I: Fragment, O: IntoColor<LinSrgb<f64>>, F: Fn(I) -> O> {
+#[derive(Clone, Copy, Debug)]
+pub struct FnShader<I: Fragment, O: IntoColor<LinSrgb<f64>>, F: Fn(I) -> O + Send + Sync> {
     _marker: std::marker::PhantomData<(I, O)>,
     f: F,
 }
-impl<I: Fragment, O: IntoColor<LinSrgb<f64>>, F: Fn(I) -> O> Shader<I> for FnShader<I, O, F> {
+impl<I: Fragment, O: IntoColor<LinSrgb<f64>> + Send + Sync, F: Fn(I) -> O + Send + Sync> Shader<I> for FnShader<I, O, F> {
     type Output = O;
 
     fn shade(&self, frag: I) -> Self::Output {
@@ -32,7 +33,7 @@ impl<I: Fragment, O: IntoColor<LinSrgb<f64>>, F: Fn(I) -> O> Shader<I> for FnSha
     }
 }
 
-impl<I: Fragment, O: IntoColor<LinSrgb<f64>>, F: Fn(I) -> O> IntoShader<I, O> for F {
+impl<I: Fragment, O: IntoColor<LinSrgb<f64>> + Send + Sync, F: Fn(I) -> O + Send + Sync> IntoShader<I, O> for F {
     type Shader = FnShader<I, O, F>;
 
     fn into_shader(self) -> Self::Shader {
@@ -43,7 +44,7 @@ impl<I: Fragment, O: IntoColor<LinSrgb<f64>>, F: Fn(I) -> O> IntoShader<I, O> fo
     }
 }
 
-impl<F: Fragment, O: IntoColor<LinSrgb<f64>>> Shader<F> for dyn Fn(F) -> O {
+impl<F: Fragment, O: IntoColor<LinSrgb<f64>> + Send + Sync> Shader<F> for dyn Fn(F) -> O {
     type Output = O;
 
     fn shade(&self, frag: F) -> Self::Output {
