@@ -1,8 +1,11 @@
+use std::fmt::Debug;
+
 use num::ToPrimitive;
 use palette::{FromColor, Hsl, IntoColor, LinSrgb, Mix, Okhsl, ShiftHue, Srgb};
 
 use crate::shader::{FragOne, FragThree, FragTwo, Fragment, Shader};
 
+#[derive(Debug, Clone, Copy)]
 pub struct Off<F: Fragment> {
     _marker: std::marker::PhantomData<F>,
 }
@@ -21,6 +24,7 @@ pub fn off<F: Fragment>() -> Off<F> {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct Color<F: Fragment> {
     color: LinSrgb<f64>,
     _marker: std::marker::PhantomData<F>,
@@ -58,6 +62,16 @@ impl<S: Shader<F>, E: Shader<F>, F: Fragment> Shader<F> for Interpolate<S, E, F>
         start.mix(end, factor)
     }
 }
+impl<S: Shader<F> + Debug, E: Shader<F> + Debug, F: Fragment + Debug> Debug
+    for Interpolate<S, E, F>
+{
+    fn fmt(&self, f: &mut std::fmt::Formatter<'_>) -> std::fmt::Result {
+        f.debug_struct("Interpolate")
+            .field("start", &self.start)
+            .field("end", &self.end)
+            .finish_non_exhaustive()
+    }
+}
 
 pub fn mix<F: Fragment, S: Shader<F>, E: Shader<F>>(
     start: S,
@@ -71,6 +85,7 @@ pub fn mix<F: Fragment, S: Shader<F>, E: Shader<F>>(
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct RotateHue<F: Fragment, S: Shader<F>> {
     _marker: std::marker::PhantomData<F>,
     shader: S,
@@ -128,6 +143,8 @@ pub fn time_gradient<
     }
 }
 
+
+#[derive(Debug, Clone, Copy)]
 pub struct Checkerboard<F: Fragment, S: Shader<F>, T: Shader<F>> {
     _marker: std::marker::PhantomData<F>,
     shaders: (S, T),
@@ -166,6 +183,7 @@ pub fn checkerboard<F: Fragment, S: Shader<F>, T: Shader<F>>(
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct Random<F: Fragment> {
     _marker: std::marker::PhantomData<F>,
 }
@@ -183,6 +201,7 @@ pub fn random<F: Fragment>() -> Random<F> {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct ModPosition<S: Shader<F>, M: ToPrimitive, F: Fragment> {
     _marker: std::marker::PhantomData<F>,
     shader: S,
@@ -254,6 +273,7 @@ pub fn mod_position<F: Fragment, S: Shader<F>, M: ToPrimitive>(
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct ModTime<F: Fragment, S: Shader<F>, M: ToPrimitive> {
     _marker: std::marker::PhantomData<F>,
     shader: S,
@@ -285,6 +305,7 @@ pub fn mod_time<F: Fragment, S: Shader<F>, M: ToPrimitive>(
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct Extrude<F: Fragment, S: Shader<F>> {
     _marker: std::marker::PhantomData<F>,
     shader: S,
@@ -321,6 +342,7 @@ pub fn extrude<F: Fragment, S: Shader<F>>(shader: S) -> Extrude<F, S> {
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct Rainbow<F: Fragment, S: Fn(F) -> f64> {
     _marker: std::marker::PhantomData<F>,
     selector: S,
@@ -355,6 +377,7 @@ pub fn one_dimensional_position_rainbow() -> Rainbow<FragOne, impl Fn(FragOne) -
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct ScaleTime<F: Fragment, S: Shader<F>> {
     _marker: std::marker::PhantomData<F>,
     shader: S,
@@ -378,6 +401,7 @@ pub fn scale_time<F: Fragment, S: Shader<F>>(shader: S, scale: f64) -> ScaleTime
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct ScalePosition<F: Fragment, S: Shader<F>> {
     _marker: std::marker::PhantomData<F>,
     shader: S,
@@ -404,6 +428,7 @@ pub fn scale_position<F: Fragment, S: Shader<F>>(shader: S, scale: f64) -> Scale
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct TranslatePosition<F: Fragment, S: Shader<F>, O> {
     _marker: std::marker::PhantomData<F>,
     shader: S,
@@ -451,6 +476,7 @@ pub fn translate_position<F: Fragment, O, S: Shader<F>>(
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct Add<L: Shader<F>, R: Shader<F>, F: Fragment> {
     _marker: std::marker::PhantomData<F>,
     left: L,
@@ -475,6 +501,7 @@ pub fn add<L: Shader<F>, R: Shader<F>, F: Fragment>(left: L, right: R) -> Add<L,
     }
 }
 
+#[derive(Debug, Clone, Copy)]
 pub struct Multiply<L: Shader<F>, R: Shader<F>, F: Fragment> {
     _marker: std::marker::PhantomData<F>,
     left: L,
