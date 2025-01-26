@@ -4,9 +4,10 @@ use core::slice;
 
 use palette::{IntoColor, LinSrgb};
 use primitives::{
-    add, checkerboard, extrude, mix, mod_position, mod_time, multiply, rotate_hue, scale_position,
-    scale_time, translate_position, Add, Checkerboard, Extrude, Interpolate, ModPosition, ModTime,
-    Multiply, RotateHue, ScalePosition, ScaleTime, TranslatePosition,
+    add, checkerboard, divide, extrude, mix, mod_position, mod_time, multiply, rotate_hue,
+    scale_position, scale_time, subtract, translate_position, volume_blur, Add, Checkerboard,
+    Divide, Extrude, Interpolate, Memoize, ModPosition, ModTime, Multiply, RotateHue,
+    ScalePosition, ScaleTime, Subtract, TranslatePosition, VolumeBlur,
 };
 
 pub trait Shader<F: Fragment>: Send + Sync {
@@ -25,7 +26,9 @@ pub struct FnShader<I: Fragment, O: IntoColor<LinSrgb<f64>>, F: Fn(I) -> O + Sen
     _marker: std::marker::PhantomData<(I, O)>,
     f: F,
 }
-impl<I: Fragment, O: IntoColor<LinSrgb<f64>> + Send + Sync, F: Fn(I) -> O + Send + Sync> Shader<I> for FnShader<I, O, F> {
+impl<I: Fragment, O: IntoColor<LinSrgb<f64>> + Send + Sync, F: Fn(I) -> O + Send + Sync> Shader<I>
+    for FnShader<I, O, F>
+{
     type Output = O;
 
     fn shade(&self, frag: I) -> Self::Output {
@@ -33,7 +36,9 @@ impl<I: Fragment, O: IntoColor<LinSrgb<f64>> + Send + Sync, F: Fn(I) -> O + Send
     }
 }
 
-impl<I: Fragment, O: IntoColor<LinSrgb<f64>> + Send + Sync, F: Fn(I) -> O + Send + Sync> IntoShader<I, O> for F {
+impl<I: Fragment, O: IntoColor<LinSrgb<f64>> + Send + Sync, F: Fn(I) -> O + Send + Sync>
+    IntoShader<I, O> for F
+{
     type Shader = FnShader<I, O, F>;
 
     fn into_shader(self) -> Self::Shader {
@@ -44,7 +49,9 @@ impl<I: Fragment, O: IntoColor<LinSrgb<f64>> + Send + Sync, F: Fn(I) -> O + Send
     }
 }
 
-impl<F: Fragment, O: IntoColor<LinSrgb<f64>> + Send + Sync> Shader<F> for dyn Fn(F) -> O + Send + Sync {
+impl<F: Fragment, O: IntoColor<LinSrgb<f64>> + Send + Sync> Shader<F>
+    for dyn Fn(F) -> O + Send + Sync
+{
     type Output = O;
 
     fn shade(&self, frag: F) -> Self::Output {
@@ -59,7 +66,7 @@ pub trait Fragment: Clone + Copy + std::fmt::Debug + Send + Sync {
     fn pos_mut(&mut self) -> &mut [f64];
 }
 
-#[derive(Clone, Copy, Debug)]
+#[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 #[repr(C)]
 pub struct FragOne {
     pub pos: f64,
@@ -174,9 +181,19 @@ pub trait ShaderExt<F: Fragment>: Shader<F> + Sized {
     fn add<O: Shader<F>>(self, other: O) -> Add<Self, O, F> {
         add(self, other)
     }
+    fn subtract<O: Shader<F>>(self, other: O) -> Subtract<Self, O, F> {
+        subtract(self, other)
+    }
 
     fn multiply<O: Shader<F>>(self, other: O) -> Multiply<Self, O, F> {
         multiply(self, other)
+    }
+    fn divide<O: Shader<F>>(self, other: O) -> Divide<Self, O, F> {
+        divide(self, other)
+    }
+
+    fn volume_blur(self, radius: f64, density: f64) -> VolumeBlur<F, Self> {
+        volume_blur(self, radius, density)
     }
 }
 impl<F: Fragment, T> ShaderExt<F> for T where T: Shader<F> {}

@@ -12,6 +12,7 @@ crate-type = ["cdylib", "rlib"]
 num = "0.4.1"
 palette = "0.7.3"
 fastrand = { version = "2.0.1" }
+ordered-float = "4.6.0"
 
 [features]
 default = []

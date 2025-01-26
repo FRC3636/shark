@@ -1,4 +1,4 @@
-use std::fmt::Debug;
+use std::{collections::BTreeMap, fmt::Debug, sync::RwLock};
 
 use num::ToPrimitive;
 use palette::{FromColor, Hsl, IntoColor, LinSrgb, Mix, Okhsl, ShiftHue, Srgb};
@@ -207,7 +207,9 @@ pub struct ModPosition<S: Shader<F>, M: ToPrimitive, F: Fragment> {
     modulo: M,
 }
 
-impl<S: Shader<FragOne>, M: ToPrimitive + Send + Sync> Shader<FragOne> for ModPosition<S, M, FragOne> {
+impl<S: Shader<FragOne>, M: ToPrimitive + Send + Sync> Shader<FragOne>
+    for ModPosition<S, M, FragOne>
+{
     type Output = S::Output;
 
     fn shade(&self, frag: FragOne) -> Self::Output {
@@ -223,7 +225,9 @@ impl<S: Shader<FragOne>, M: ToPrimitive + Send + Sync> Shader<FragOne> for ModPo
     }
 }
 
-impl<S: Shader<FragTwo>, M: ToPrimitive + Send + Sync> Shader<FragTwo> for ModPosition<S, M, FragTwo> {
+impl<S: Shader<FragTwo>, M: ToPrimitive + Send + Sync> Shader<FragTwo>
+    for ModPosition<S, M, FragTwo>
+{
     type Output = S::Output;
 
     fn shade(&self, frag: FragTwo) -> Self::Output {
@@ -240,7 +244,9 @@ impl<S: Shader<FragTwo>, M: ToPrimitive + Send + Sync> Shader<FragTwo> for ModPo
     }
 }
 
-impl<S: Shader<FragThree>, M: ToPrimitive + Send + Sync> Shader<FragThree> for ModPosition<S, M, FragThree> {
+impl<S: Shader<FragThree>, M: ToPrimitive + Send + Sync> Shader<FragThree>
+    for ModPosition<S, M, FragThree>
+{
     type Output = S::Output;
 
     fn shade(&self, frag: FragThree) -> Self::Output {
@@ -475,52 +481,216 @@ pub fn translate_position<F: Fragment, O, S: Shader<F>>(
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct Add<L: Shader<F>, R: Shader<F>, F: Fragment> {
-    _marker: std::marker::PhantomData<F>,
-    left: L,
-    right: R,
+macro_rules! simple_op_combinator {
+    ($name:ident, $func_name:ident = $op:tt) => {
+        #[derive(Debug, Clone, Copy)]
+        pub struct $name<L: Shader<F>, R: Shader<F>, F: Fragment> {
+            _marker: std::marker::PhantomData<F>,
+            left: L,
+            right: R,
+        }
+        impl<L: Shader<F>, R: Shader<F>, F: Fragment> Shader<F> for $name<L, R, F> {
+            type Output = LinSrgb<f64>;
+
+            fn shade(&self, frag: F) -> Self::Output {
+                let lhs = self.left.shade(frag).into_color();
+                let rhs = self.right.shade(frag).into_color();
+                lhs $op rhs
+            }
+        }
+
+        pub fn $func_name<L: Shader<F>, R: Shader<F>, F: Fragment>(left: L, right: R) -> $name<L, R, F> {
+            $name {
+                _marker: std::marker::PhantomData,
+                left,
+                right,
+            }
+        }
+    };
 }
 
-impl<L: Shader<F>, R: Shader<F>, F: Fragment> Shader<F> for Add<L, R, F> {
+simple_op_combinator!(Add, add = +);
+simple_op_combinator!(Subtract, subtract = -);
+simple_op_combinator!(Multiply, multiply = *);
+simple_op_combinator!(Divide, divide = /);
+
+type OrderedFloat = ordered_float::OrderedFloat<f64>;
+
+#[derive(Debug)]
+pub struct Memoize<F: Fragment, S: Shader<F>, K> {
+    shader: S,
+    cache: RwLock<BTreeMap<K, S::Output>>,
+}
+impl<S: Shader<FragOne>> Shader<FragOne> for Memoize<FragOne, S, OrderedFloat>
+where
+    S::Output: Clone,
+{
+    type Output = S::Output;
+
+    fn shade(&self, frag: FragOne) -> Self::Output {
+        if let Some(color) = self.cache.read().unwrap().get(&frag.pos.into()) {
+            return color.clone();
+        }
+
+        let color = self.shader.shade(frag);
+        self.cache
+            .write()
+            .unwrap()
+            .insert(frag.pos.into(), color.clone());
+        color
+    }
+}
+impl<S: Shader<FragTwo>> Shader<FragTwo> for Memoize<FragTwo, S, (OrderedFloat, OrderedFloat)>
+where
+    S::Output: Clone,
+{
+    type Output = S::Output;
+
+    fn shade(&self, frag: FragTwo) -> Self::Output {
+        let key = (frag.pos[0].into(), frag.pos[1].into());
+        if let Some(color) = self.cache.read().unwrap().get(&key) {
+            return color.clone();
+        }
+
+        let color = self.shader.shade(frag);
+        self.cache.write().unwrap().insert(key, color.clone());
+        color
+    }
+}
+impl<S: Shader<FragThree>> Shader<FragThree>
+    for Memoize<FragThree, S, (OrderedFloat, OrderedFloat, OrderedFloat)>
+where
+    S::Output: Clone,
+{
+    type Output = S::Output;
+
+    fn shade(&self, frag: FragThree) -> Self::Output {
+        let key = (frag.pos[0].into(), frag.pos[1].into(), frag.pos[2].into());
+        if let Some(color) = self.cache.read().unwrap().get(&key) {
+            return color.clone();
+        }
+
+        let color = self.shader.shade(frag);
+        self.cache.write().unwrap().insert(key, color.clone());
+        color
+    }
+}
+
+pub fn memoize<F: Fragment, S: Shader<F>, K>(shader: S) -> Memoize<F, S, K> {
+    Memoize {
+        shader,
+        cache: RwLock::new(BTreeMap::new()),
+    }
+}
+
+fn lerp(start: f64, end: f64, t: f64) -> f64 {
+    start + (end - start) * t
+}
+
+#[derive(Debug, Clone, Copy)]
+pub struct VolumeBlur<F: Fragment, S: Shader<F>> {
+    shader: S,
+    radius: f64,
+    density: f64,
+    _marker: std::marker::PhantomData<F>,
+}
+impl<S: Shader<FragOne>> Shader<FragOne> for VolumeBlur<FragOne, S>
+where
+    S::Output: Clone,
+{
     type Output = LinSrgb<f64>;
 
-    fn shade(&self, frag: F) -> Self::Output {
-        let lhs = self.left.shade(frag).into_color();
-        let rhs = self.right.shade(frag).into_color();
-        lhs + rhs
+    fn shade(&self, frag: FragOne) -> Self::Output {
+        let num_samples = (self.radius * self.density * 2.0).floor() as usize;
+        let mut colors = Vec::with_capacity(num_samples);
+
+        // Sample the shader at different positions
+        for i in 0..num_samples {
+            let offset = lerp(-self.radius, self.radius, i as f64 / num_samples as f64);
+            let frag = FragOne {
+                pos: frag.pos + offset,
+                ..frag
+            };
+            colors.push(self.shader.shade(frag).into_color());
+        }
+
+        colors
+            .iter()
+            .fold(LinSrgb::new(0.0, 0.0, 0.0), |acc, c| acc + *c)
+            / (colors.len() as f64)
     }
 }
-
-pub fn add<L: Shader<F>, R: Shader<F>, F: Fragment>(left: L, right: R) -> Add<L, R, F> {
-    Add {
-        _marker: std::marker::PhantomData,
-        left,
-        right,
-    }
-}
-
-#[derive(Debug, Clone, Copy)]
-pub struct Multiply<L: Shader<F>, R: Shader<F>, F: Fragment> {
-    _marker: std::marker::PhantomData<F>,
-    left: L,
-    right: R,
-}
-
-impl<L: Shader<F>, R: Shader<F>, F: Fragment> Shader<F> for Multiply<L, R, F> {
+impl<S: Shader<FragTwo>> Shader<FragTwo> for VolumeBlur<FragTwo, S>
+where
+    S::Output: Clone,
+{
     type Output = LinSrgb<f64>;
 
-    fn shade(&self, frag: F) -> Self::Output {
-        let lhs = self.left.shade(frag).into_color();
-        let rhs = self.right.shade(frag).into_color();
-        lhs * rhs
+    fn shade(&self, frag: FragTwo) -> Self::Output {
+        let box_size = (self.radius * self.density * 2.0).floor() as usize;
+        let mut colors = Vec::with_capacity(box_size * box_size);
+
+        // Sample the shader at different positions
+        for x in 0..box_size {
+            let x_offset = lerp(-self.radius, self.radius, x as f64 / box_size as f64);
+            for y in 0..box_size {
+                let y_offset = lerp(-self.radius, self.radius, y as f64 / box_size as f64);
+                let frag = FragTwo {
+                    pos: [frag.pos[0] + x_offset, frag.pos[1] + y_offset],
+                    ..frag
+                };
+                colors.push(self.shader.shade(frag).into_color());
+            }
+        }
+
+        colors
+            .iter()
+            .fold(LinSrgb::new(0.0, 0.0, 0.0), |acc, c| acc + *c)
+            / (colors.len() as f64)
+    }
+}
+impl<S: Shader<FragThree>> Shader<FragThree> for VolumeBlur<FragThree, S>
+where
+    S::Output: Clone,
+{
+    type Output = LinSrgb<f64>;
+
+    fn shade(&self, frag: FragThree) -> Self::Output {
+        let cube_size = (self.radius * self.density * 2.0).floor() as usize;
+        let mut colors = Vec::with_capacity(cube_size * cube_size * cube_size);
+
+        // Sample the shader at different positions
+        for x in 0..cube_size {
+            let x_offset = lerp(-self.radius, self.radius, x as f64 / cube_size as f64);
+            for y in 0..cube_size {
+                let y_offset = lerp(-self.radius, self.radius, y as f64 / cube_size as f64);
+                for z in 0..cube_size {
+                    let z_offset = lerp(-self.radius, self.radius, z as f64 / cube_size as f64);
+                    let frag = FragThree {
+                        pos: [
+                            frag.pos[0] + x_offset,
+                            frag.pos[1] + y_offset,
+                            frag.pos[2] + z_offset,
+                        ],
+                        ..frag
+                    };
+                    colors.push(self.shader.shade(frag).into_color());
+                }
+            }
+        }
+
+        colors
+            .iter()
+            .fold(LinSrgb::new(0.0, 0.0, 0.0), |acc, c| acc + *c)
+            / (colors.len() as f64)
     }
 }
 
-pub fn multiply<L: Shader<F>, R: Shader<F>, F: Fragment>(left: L, right: R) -> Multiply<L, R, F> {
-    Multiply {
+pub fn volume_blur<F: Fragment, S: Shader<F>>(shader: S, radius: f64, density: f64) -> VolumeBlur<F, S> {
+    VolumeBlur {
+        shader,
+        radius,
+        density,
         _marker: std::marker::PhantomData,
-        left,
-        right,
     }
 }
