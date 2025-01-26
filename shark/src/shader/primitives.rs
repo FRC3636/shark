@@ -517,69 +517,80 @@ simple_op_combinator!(Divide, divide = /);
 type OrderedFloat = ordered_float::OrderedFloat<f64>;
 
 #[derive(Debug)]
-pub struct Memoize<F: Fragment, S: Shader<F>, K> {
+pub struct Memoize<F: Fragment, S: Shader<F>, const D: usize> {
     shader: S,
-    cache: RwLock<BTreeMap<K, S::Output>>,
+    cache: RwLock<BTreeMap<[OrderedFloat; D], S::Output>>,
+    threshold: Option<f64>,
 }
-impl<S: Shader<FragOne>> Shader<FragOne> for Memoize<FragOne, S, OrderedFloat>
+impl<F: Fragment, S: Shader<F>, const D: usize> Memoize<F, S, D>
+where
+    S::Output: Clone,
+{
+    fn get(&self, key: [OrderedFloat; D]) -> Option<S::Output> {
+        let cache = self.cache.read().unwrap();
+        let key = cache.keys().find(|k| {
+            k.iter()
+                .zip(key.iter())
+                .map(|(a, b)| (a - b).powi(2))
+                .sum::<f64>()
+                .sqrt()
+                < self.threshold.unwrap_or(0.0)
+        });
+        key.map(|k| (*cache.get(k).unwrap()).clone())
+    }
+
+    fn get_or_shade(&self, frag: F, key: [OrderedFloat; D]) -> S::Output {
+        if let Some(color) = self.get(key) {
+            return color;
+        }
+
+        let color = self.shader.shade(frag);
+        self.cache.write().unwrap().insert(key, color.clone());
+        color
+    }
+}
+
+impl<S: Shader<FragOne>> Shader<FragOne> for Memoize<FragOne, S, 1>
 where
     S::Output: Clone,
 {
     type Output = S::Output;
 
     fn shade(&self, frag: FragOne) -> Self::Output {
-        if let Some(color) = self.cache.read().unwrap().get(&frag.pos.into()) {
-            return color.clone();
-        }
-
-        let color = self.shader.shade(frag);
-        self.cache
-            .write()
-            .unwrap()
-            .insert(frag.pos.into(), color.clone());
-        color
+        let key = [frag.pos.into()];
+        self.get_or_shade(frag, key)
     }
 }
-impl<S: Shader<FragTwo>> Shader<FragTwo> for Memoize<FragTwo, S, (OrderedFloat, OrderedFloat)>
+impl<S: Shader<FragTwo>> Shader<FragTwo> for Memoize<FragTwo, S, 2>
 where
     S::Output: Clone,
 {
     type Output = S::Output;
 
     fn shade(&self, frag: FragTwo) -> Self::Output {
-        let key = (frag.pos[0].into(), frag.pos[1].into());
-        if let Some(color) = self.cache.read().unwrap().get(&key) {
-            return color.clone();
-        }
-
-        let color = self.shader.shade(frag);
-        self.cache.write().unwrap().insert(key, color.clone());
-        color
+        let key = [frag.pos[0].into(), frag.pos[1].into()];
+        self.get_or_shade(frag, key)
     }
 }
-impl<S: Shader<FragThree>> Shader<FragThree>
-    for Memoize<FragThree, S, (OrderedFloat, OrderedFloat, OrderedFloat)>
+impl<S: Shader<FragThree>> Shader<FragThree> for Memoize<FragThree, S, 3>
 where
     S::Output: Clone,
 {
     type Output = S::Output;
 
     fn shade(&self, frag: FragThree) -> Self::Output {
-        let key = (frag.pos[0].into(), frag.pos[1].into(), frag.pos[2].into());
-        if let Some(color) = self.cache.read().unwrap().get(&key) {
-            dbg!();
-            return color.clone();
-        }
-
-        let color = self.shader.shade(frag);
-        self.cache.write().unwrap().insert(key, color.clone());
-        color
+        let key = [frag.pos[0].into(), frag.pos[1].into(), frag.pos[2].into()];
+        self.get_or_shade(frag, key)
     }
 }
 
-pub fn memoize<F: Fragment, S: Shader<F>, K>(shader: S) -> Memoize<F, S, K> {
+pub fn memoize<F: Fragment, S: Shader<F>, const D: usize>(
+    shader: S,
+    distance_threshold: Option<f64>,
+) -> Memoize<F, S, D> {
     Memoize {
         shader,
+        threshold: distance_threshold,
         cache: RwLock::new(BTreeMap::new()),
     }
 }
@@ -687,7 +698,11 @@ where
     }
 }
 
-pub fn volume_blur<F: Fragment, S: Shader<F>>(shader: S, radius: f64, num_samples: usize) -> VolumeBlur<F, S> {
+pub fn volume_blur<F: Fragment, S: Shader<F>>(
+    shader: S,
+    radius: f64,
+    num_samples: usize,
+) -> VolumeBlur<F, S> {
     VolumeBlur {
         shader,
         radius,
