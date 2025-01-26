@@ -1,4 +1,8 @@
-use std::{collections::BTreeMap, fmt::Debug, sync::RwLock};
+use std::{
+    collections::BTreeMap,
+    fmt::Debug,
+    sync::{atomic::AtomicU64, RwLock},
+};
 
 use num::{integer::Roots, ToPrimitive};
 use palette::{FromColor, Hsl, IntoColor, LinSrgb, Mix, Okhsl, ShiftHue, Srgb};
@@ -521,11 +525,17 @@ pub struct Memoize<F: Fragment, S: Shader<F>, const D: usize> {
     shader: S,
     cache: RwLock<BTreeMap<[OrderedFloat; D], S::Output>>,
     threshold: Option<f64>,
+    time_invalidates: bool,
+    cached_time: AtomicU64,
 }
 impl<F: Fragment, S: Shader<F>, const D: usize> Memoize<F, S, D>
 where
     S::Output: Clone,
 {
+    fn invalidate(&self) {
+        self.cache.write().unwrap().clear();
+    }
+
     fn get(&self, key: [OrderedFloat; D]) -> Option<S::Output> {
         let cache = self.cache.read().unwrap();
         let key = cache.keys().find(|k| {
@@ -540,7 +550,12 @@ where
     }
 
     fn get_or_shade(&self, frag: F, key: [OrderedFloat; D]) -> S::Output {
-        if let Some(color) = self.get(key) {
+        if self.time_invalidates
+            && self.cached_time.load(std::sync::atomic::Ordering::Relaxed) != frag.time().to_bits()
+        {
+            self.invalidate();
+            self.cached_time.store(frag.time().to_bits(), std::sync::atomic::Ordering::Relaxed);
+        } else if let Some(color) = self.get(key) {
             return color;
         }
 
@@ -587,11 +602,14 @@ where
 pub fn memoize<F: Fragment, S: Shader<F>, const D: usize>(
     shader: S,
     distance_threshold: Option<f64>,
+    time_invalidates: bool,
 ) -> Memoize<F, S, D> {
     Memoize {
         shader,
         threshold: distance_threshold,
+        time_invalidates,
         cache: RwLock::new(BTreeMap::new()),
+        cached_time: AtomicU64::new(0),
     }
 }
 
