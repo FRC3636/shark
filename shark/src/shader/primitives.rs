@@ -1,6 +1,6 @@
 use std::{collections::BTreeMap, fmt::Debug, sync::RwLock};
 
-use num::ToPrimitive;
+use num::{integer::Roots, ToPrimitive};
 use palette::{FromColor, Hsl, IntoColor, LinSrgb, Mix, Okhsl, ShiftHue, Srgb};
 
 use crate::shader::{FragOne, FragThree, FragTwo, Fragment, Shader};
@@ -567,6 +567,7 @@ where
     fn shade(&self, frag: FragThree) -> Self::Output {
         let key = (frag.pos[0].into(), frag.pos[1].into(), frag.pos[2].into());
         if let Some(color) = self.cache.read().unwrap().get(&key) {
+            dbg!();
             return color.clone();
         }
 
@@ -591,7 +592,7 @@ fn lerp(start: f64, end: f64, t: f64) -> f64 {
 pub struct VolumeBlur<F: Fragment, S: Shader<F>> {
     shader: S,
     radius: f64,
-    density: f64,
+    samples: usize,
     _marker: std::marker::PhantomData<F>,
 }
 impl<S: Shader<FragOne>> Shader<FragOne> for VolumeBlur<FragOne, S>
@@ -601,12 +602,11 @@ where
     type Output = LinSrgb<f64>;
 
     fn shade(&self, frag: FragOne) -> Self::Output {
-        let num_samples = (self.radius * self.density * 2.0).floor() as usize;
-        let mut colors = Vec::with_capacity(num_samples);
+        let mut colors = Vec::with_capacity(self.samples as _);
 
         // Sample the shader at different positions
-        for i in 0..num_samples {
-            let offset = lerp(-self.radius, self.radius, i as f64 / num_samples as f64);
+        for i in 0..self.samples {
+            let offset = lerp(-self.radius, self.radius, i as f64 / self.samples as f64);
             let frag = FragOne {
                 pos: frag.pos + offset,
                 ..frag
@@ -627,8 +627,9 @@ where
     type Output = LinSrgb<f64>;
 
     fn shade(&self, frag: FragTwo) -> Self::Output {
-        let box_size = (self.radius * self.density * 2.0).floor() as usize;
-        let mut colors = Vec::with_capacity(box_size * box_size);
+        let mut colors = Vec::with_capacity(self.samples * self.samples);
+
+        let box_size = self.samples.sqrt();
 
         // Sample the shader at different positions
         for x in 0..box_size {
@@ -656,7 +657,7 @@ where
     type Output = LinSrgb<f64>;
 
     fn shade(&self, frag: FragThree) -> Self::Output {
-        let cube_size = (self.radius * self.density * 2.0).floor() as usize;
+        let cube_size = self.samples.cbrt();
         let mut colors = Vec::with_capacity(cube_size * cube_size * cube_size);
 
         // Sample the shader at different positions
@@ -686,11 +687,11 @@ where
     }
 }
 
-pub fn volume_blur<F: Fragment, S: Shader<F>>(shader: S, radius: f64, density: f64) -> VolumeBlur<F, S> {
+pub fn volume_blur<F: Fragment, S: Shader<F>>(shader: S, radius: f64, num_samples: usize) -> VolumeBlur<F, S> {
     VolumeBlur {
         shader,
         radius,
-        density,
+        samples: num_samples,
         _marker: std::marker::PhantomData,
     }
 }

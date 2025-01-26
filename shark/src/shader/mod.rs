@@ -192,8 +192,8 @@ pub trait ShaderExt<F: Fragment>: Shader<F> + Sized {
         divide(self, other)
     }
 
-    fn volume_blur(self, radius: f64, density: f64) -> VolumeBlur<F, Self> {
-        volume_blur(self, radius, density)
+    fn volume_blur(self, radius: f64, num_samples: usize) -> VolumeBlur<F, Self> {
+        volume_blur(self, radius, num_samples)
     }
 }
 impl<F: Fragment, T> ShaderExt<F> for T where T: Shader<F> {}
