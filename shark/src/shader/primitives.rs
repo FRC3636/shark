@@ -109,7 +109,7 @@ pub fn rotate_hue<F: Fragment, S: Shader<F>>(shader: S, angle: f64) -> RotateHue
     RotateHue {
         _marker: std::marker::PhantomData,
         shader,
-        angle: angle.to_radians(),
+        angle,
     }
 }
 
