@@ -85,7 +85,7 @@ pub fn time_rainbow<F: Vertex>() -> Rainbow<F, impl Fn(F) -> f64> {
     }
 }
 
-pub fn position_rainbow<const D: usize, F: Vertex>() -> Rainbow<F, impl Fn(F) -> f64> {
+pub fn position_rainbow<F: Vertex>() -> Rainbow<F, impl Fn(F) -> f64> {
     Rainbow {
         _marker: core::marker::PhantomData,
         selector: |frag| frag.pos().iter().sum(),
