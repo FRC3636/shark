@@ -1,14 +1,22 @@
-[workspace]
-resolver = "2"
-members = [
-    "example_visualization",
-    "shark",
-    "shark-visualizer",
-    # "shark-ws281x",
-]
+[package]
+name = "shark"
+version = "0.1.0"
+edition = "2021"
 
-[profile.dev.package."*"]
-opt-level = 3
+[lib]
+crate-type = ["cdylib", "rlib"]
 
-[profile.dev]
-opt-level = 0
+# See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
+
+[dependencies]
+num = "0.4.1"
+palette = "0.7.3"
+fastrand = { version = "2.0.1" }
+ordered-float = "5.1.0"
+
+[features]
+default = []
+
+memoize = ["alloc", "std"]
+alloc = []
+std = []

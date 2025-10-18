@@ -1,32 +1,30 @@
 pub mod primitives;
 
-use core::slice;
-
 use palette::{IntoColor, LinSrgb};
 use primitives::{
     add, checkerboard, divide, extrude, mix, mod_position, mod_time, multiply, rotate_hue,
     scale_position, scale_time, subtract, translate_position, volume_blur, Add, Checkerboard,
-    Divide, Extrude, Interpolate, Memoize, ModPosition, ModTime, Multiply, RotateHue,
-    ScalePosition, ScaleTime, Subtract, TranslatePosition, VolumeBlur,
+    Divide, Extrude, Interpolate, ModPosition, ModTime, Multiply, RotateHue, ScalePosition,
+    ScaleTime, Subtract, TranslatePosition, VolumeBlur,
 };
 
-pub trait Shader<F: Fragment>: Send + Sync {
+pub trait Shader<F: Vertex>: Send + Sync {
     type Output: IntoColor<LinSrgb<f64>> + Send + Sync;
 
     fn shade(&self, frag: F) -> Self::Output;
 }
 
-pub trait IntoShader<F: Fragment, O: IntoColor<LinSrgb<f64>>> {
+pub trait IntoShader<F: Vertex, O: IntoColor<LinSrgb<f64>>> {
     type Shader: Shader<F, Output = O>;
     fn into_shader(self) -> Self::Shader;
 }
 
 #[derive(Clone, Copy, Debug)]
-pub struct FnShader<I: Fragment, O: IntoColor<LinSrgb<f64>>, F: Fn(I) -> O + Send + Sync> {
-    _marker: std::marker::PhantomData<(I, O)>,
+pub struct FnShader<I: Vertex, O: IntoColor<LinSrgb<f64>>, F: Fn(I) -> O + Send + Sync> {
+    _marker: core::marker::PhantomData<(I, O)>,
     f: F,
 }
-impl<I: Fragment, O: IntoColor<LinSrgb<f64>> + Send + Sync, F: Fn(I) -> O + Send + Sync> Shader<I>
+impl<I: Vertex, O: IntoColor<LinSrgb<f64>> + Send + Sync, F: Fn(I) -> O + Send + Sync> Shader<I>
     for FnShader<I, O, F>
 {
     type Output = O;
@@ -36,20 +34,20 @@ impl<I: Fragment, O: IntoColor<LinSrgb<f64>> + Send + Sync, F: Fn(I) -> O + Send
     }
 }
 
-impl<I: Fragment, O: IntoColor<LinSrgb<f64>> + Send + Sync, F: Fn(I) -> O + Send + Sync>
+impl<I: Vertex, O: IntoColor<LinSrgb<f64>> + Send + Sync, F: Fn(I) -> O + Send + Sync>
     IntoShader<I, O> for F
 {
     type Shader = FnShader<I, O, F>;
 
     fn into_shader(self) -> Self::Shader {
         FnShader {
-            _marker: std::marker::PhantomData,
+            _marker: core::marker::PhantomData,
             f: self,
         }
     }
 }
 
-impl<F: Fragment, O: IntoColor<LinSrgb<f64>> + Send + Sync> Shader<F>
+impl<F: Vertex, O: IntoColor<LinSrgb<f64>> + Send + Sync> Shader<F>
     for dyn Fn(F) -> O + Send + Sync
 {
     type Output = O;
@@ -59,44 +57,24 @@ impl<F: Fragment, O: IntoColor<LinSrgb<f64>> + Send + Sync> Shader<F>
     }
 }
 
-pub trait Fragment: Clone + Copy + std::fmt::Debug + Send + Sync {
+pub trait Vertex: Clone + Copy + core::fmt::Debug + Send + Sync {
     fn time(&self) -> f64;
     fn time_mut(&mut self) -> &mut f64;
     fn pos(&self) -> &[f64];
     fn pos_mut(&mut self) -> &mut [f64];
 }
+pub trait VertexDim<const D: usize>: Vertex {
+    fn pos_sized(&self) -> &[f64; D];
+    fn pos_sized_mut(&mut self) -> &mut [f64; D];
+}
 
 #[derive(Clone, Copy, Debug, PartialEq, PartialOrd)]
 #[repr(C)]
 pub struct FragOne {
-    pub pos: f64,
+    pub pos: [f64; 1],
     pub time: f64,
 }
-impl Fragment for FragOne {
-    fn time(&self) -> f64 {
-        self.time
-    }
-
-    fn time_mut(&mut self) -> &mut f64 {
-        &mut self.time
-    }
-
-    fn pos(&self) -> &[f64] {
-        slice::from_ref(&self.pos)
-    }
-
-    fn pos_mut(&mut self) -> &mut [f64] {
-        slice::from_mut(&mut self.pos)
-    }
-}
-
-#[derive(Clone, Copy, Debug)]
-#[repr(C)]
-pub struct FragTwo {
-    pub pos: [f64; 2],
-    pub time: f64,
-}
-impl Fragment for FragTwo {
+impl Vertex for FragOne {
     fn time(&self) -> f64 {
         self.time
     }
@@ -110,6 +88,48 @@ impl Fragment for FragTwo {
     }
 
     fn pos_mut(&mut self) -> &mut [f64] {
+        &mut self.pos
+    }
+}
+impl VertexDim<1> for FragOne {
+    fn pos_sized(&self) -> &[f64; 1] {
+        &self.pos
+    }
+
+    fn pos_sized_mut(&mut self) -> &mut [f64; 1] {
+        &mut self.pos
+    }
+}
+
+#[derive(Clone, Copy, Debug)]
+#[repr(C)]
+pub struct FragTwo {
+    pub pos: [f64; 2],
+    pub time: f64,
+}
+impl Vertex for FragTwo {
+    fn time(&self) -> f64 {
+        self.time
+    }
+
+    fn time_mut(&mut self) -> &mut f64 {
+        &mut self.time
+    }
+
+    fn pos(&self) -> &[f64] {
+        &self.pos
+    }
+
+    fn pos_mut(&mut self) -> &mut [f64] {
+        &mut self.pos
+    }
+}
+impl VertexDim<2> for FragTwo {
+    fn pos_sized(&self) -> &[f64; 2] {
+        &self.pos
+    }
+
+    fn pos_sized_mut(&mut self) -> &mut [f64; 2] {
         &mut self.pos
     }
 }
@@ -120,7 +140,7 @@ pub struct FragThree {
     pub pos: [f64; 3],
     pub time: f64,
 }
-impl Fragment for FragThree {
+impl Vertex for FragThree {
     fn time(&self) -> f64 {
         self.time
     }
@@ -138,7 +158,7 @@ impl Fragment for FragThree {
     }
 }
 
-pub trait ShaderExt<F: Fragment>: Shader<F> + Sized {
+pub trait ShaderExt<F: Vertex>: Shader<F> + Sized {
     fn mix<S: Shader<F>>(self, other: S, factor: f64) -> Interpolate<Self, S, F> {
         mix(self, other, factor)
     }
@@ -160,10 +180,6 @@ pub trait ShaderExt<F: Fragment>: Shader<F> + Sized {
 
     fn rotate_hue(self, angle: f64) -> RotateHue<F, Self> {
         rotate_hue(self, angle)
-    }
-
-    fn extrude(self) -> Extrude<F, Self> {
-        extrude(self)
     }
 
     fn scale_time(self, factor: f64) -> ScaleTime<F, Self> {
@@ -196,7 +212,14 @@ pub trait ShaderExt<F: Fragment>: Shader<F> + Sized {
         volume_blur(self, radius, num_samples)
     }
 }
-impl<F: Fragment, T> ShaderExt<F> for T where T: Shader<F> {}
+impl<F: Vertex, T> ShaderExt<F> for T where T: Shader<F> {}
+
+pub trait ShaderExtrudeExt<const D: usize, F: Vertex + VertexDim<D>>: Shader<F> + Sized {
+    fn extrude(self) -> Extrude<D, F, Self> {
+        extrude(self)
+    }
+}
+impl<const D: usize, F: Vertex + VertexDim<D>, T> ShaderExtrudeExt<D, F> for T where T: Shader<F> {}
 
 #[cfg(test)]
 mod tests {

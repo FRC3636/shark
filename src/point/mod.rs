@@ -15,7 +15,7 @@ impl Point {
     }
 }
 
-impl std::ops::Add for Point {
+impl core::ops::Add for Point {
     type Output = Self;
 
     fn add(self, rhs: Self) -> Self::Output {
@@ -26,7 +26,7 @@ impl std::ops::Add for Point {
         }
     }
 }
-impl std::ops::Sub for Point {
+impl core::ops::Sub for Point {
     type Output = Self;
 
     fn sub(self, rhs: Self) -> Self::Output {
@@ -37,7 +37,7 @@ impl std::ops::Sub for Point {
         }
     }
 }
-impl std::ops::Mul for Point {
+impl core::ops::Mul for Point {
     type Output = Self;
 
     fn mul(self, rhs: Self) -> Self::Output {
@@ -48,7 +48,7 @@ impl std::ops::Mul for Point {
         }
     }
 }
-impl std::ops::Mul<f64> for Point {
+impl core::ops::Mul<f64> for Point {
     type Output = Self;
 
     fn mul(self, rhs: f64) -> Self::Output {
@@ -59,7 +59,7 @@ impl std::ops::Mul<f64> for Point {
         }
     }
 }
-impl std::ops::Mul<Point> for f64 {
+impl core::ops::Mul<Point> for f64 {
     type Output = Point;
 
     fn mul(self, rhs: Point) -> Self::Output {
