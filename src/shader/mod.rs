@@ -1,6 +1,8 @@
 pub mod primitives;
 
 use palette::{IntoColor, LinSrgb};
+#[cfg(feature = "memoize")]
+use primitives::Memoize;
 use primitives::{
     add, checkerboard, divide, extrude, mix, mod_position, mod_time, multiply, rotate_hue,
     scale_position, scale_time, subtract, translate_position, volume_blur, Add, Checkerboard,
@@ -208,18 +210,28 @@ pub trait ShaderExt<F: Vertex>: Shader<F> + Sized {
         divide(self, other)
     }
 
-    fn volume_blur(self, radius: f64, num_samples: usize) -> VolumeBlur<F, Self> {
-        volume_blur(self, radius, num_samples)
+    fn volume_blur<const P: usize>(self, radius: f64) -> VolumeBlur<P, F, Self> {
+        volume_blur(self, radius)
     }
 }
 impl<F: Vertex, T> ShaderExt<F> for T where T: Shader<F> {}
 
-pub trait ShaderExtrudeExt<const D: usize, F: Vertex + VertexDim<D>>: Shader<F> + Sized {
+pub trait DimShaderExt<const D: usize, F: Vertex + VertexDim<D>>: Shader<F> + Sized {
     fn extrude(self) -> Extrude<D, F, Self> {
         extrude(self)
     }
+    #[cfg(feature = "memoize")]
+    fn memoize(
+        self,
+        distance_threshold: Option<f64>,
+        time_invalidates: bool,
+    ) -> Memoize<D, F, Self> {
+        use primitives::memoize;
+
+        memoize(self, distance_threshold, time_invalidates)
+    }
 }
-impl<const D: usize, F: Vertex + VertexDim<D>, T> ShaderExtrudeExt<D, F> for T where T: Shader<F> {}
+impl<const D: usize, F: Vertex + VertexDim<D>, T> DimShaderExt<D, F> for T where T: Shader<F> {}
 
 #[cfg(test)]
 mod tests {
@@ -231,6 +243,64 @@ mod tests {
     fn fn_shaders() {
         let shader = (|_: FragOne| Srgb::new(0.0, 1.0, 0.0)).into_shader();
 
-        shader.shade(FragOne { pos: [0.0], time: 0.0 });
+        shader.shade(FragOne {
+            pos: [0.0],
+            time: 0.0,
+        });
+    }
+
+    #[bench]
+    fn bench_rainbow_shader(b: &mut test::Bencher) {
+        let shader = crate::shader::primitives::rainbow(|frag: FragOne| frag.pos[0]);
+
+        b.iter(|| {
+            shader.shade(FragOne {
+                pos: [42.0],
+                time: 0.0,
+            });
+        });
+    }
+
+    #[cfg(feature = "memoize")]
+    #[bench]
+    fn bench_memoize_shader(b: &mut test::Bencher) {
+        let shader = crate::shader::primitives::memoize(
+            crate::shader::primitives::rainbow(|frag: FragOne| frag.pos[0]),
+            Some(0.1),
+            false,
+        );
+
+        b.iter(|| {
+            shader.shade(FragOne {
+                pos: [42.0],
+                time: 0.0,
+            });
+        });
+    }
+
+    #[bench]
+    fn bench_volume_blur(b: &mut test::Bencher) {
+        use crate::shader::ShaderExt;
+        let shader = crate::shader::primitives::position_rainbow().volume_blur::<12>(10.0);
+        b.iter(|| {
+            shader.shade(FragOne {
+                pos: [42.0],
+                time: 0.0,
+            });
+        });
+    }
+
+    #[bench]
+    fn bench_volume_blur_memoized(b: &mut test::Bencher) {
+        use crate::shader::{DimShaderExt, ShaderExt};
+        let shader = crate::shader::primitives::position_rainbow()
+            .volume_blur::<12>(10.0)
+            .memoize(Some(0.1), false);
+        b.iter(|| {
+            shader.shade(FragOne {
+                pos: [42.0],
+                time: 0.0,
+            });
+        });
     }
 }

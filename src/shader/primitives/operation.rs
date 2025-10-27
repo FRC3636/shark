@@ -2,7 +2,7 @@ use num::ToPrimitive;
 use palette::{FromColor, Hsl, IntoColor, LinSrgb, Mix, ShiftHue};
 
 use crate::shader::{Shader, Vertex, VertexDim};
-use alloc::{boxed::Box, fmt::Debug, vec::Vec};
+use alloc::{boxed::Box, fmt::Debug};
 
 pub struct Interpolate<S: Shader<F>, E: Shader<F>, F: Vertex> {
     start: S,
@@ -307,26 +307,25 @@ fn lerp(start: f64, end: f64, t: f64) -> f64 {
 }
 
 #[derive(Debug, Clone, Copy)]
-pub struct VolumeBlur<F: Vertex, S: Shader<F>> {
+pub struct VolumeBlur<const P: usize, F: Vertex, S: Shader<F>> {
     shader: S,
     radius: f64,
-    samples: usize,
     _marker: core::marker::PhantomData<fn(F)>,
 }
-impl<V: Vertex, S: Shader<V>> Shader<V> for VolumeBlur<V, S>
+impl<const P: usize, V: Vertex, S: Shader<V>> Shader<V> for VolumeBlur<P, V, S>
 where
     S::Output: Clone,
 {
     type Output = LinSrgb<f64>;
 
     fn shade(&self, mut frag: V) -> Self::Output {
-        let mut colors = Vec::with_capacity(self.samples as _);
+        let mut colors = [LinSrgb::<f64>::new(0.0, 0.0, 0.0); P];
 
         // Sample the shader at different positions
-        for i in 0..self.samples {
-            let offset = lerp(-self.radius, self.radius, i as f64 / self.samples as f64);
+        for (i, color) in colors.iter_mut().enumerate() {
+            let offset = lerp(-self.radius, self.radius, i as f64 / P as f64);
             frag.pos_mut().iter_mut().for_each(|c| *c += offset);
-            colors.push(self.shader.shade(frag).into_color());
+            *color = self.shader.shade(frag).into_color();
         }
 
         colors
@@ -336,15 +335,13 @@ where
     }
 }
 
-pub fn volume_blur<F: Vertex, S: Shader<F>>(
+pub fn volume_blur<const P: usize, F: Vertex, S: Shader<F>>(
     shader: S,
     radius: f64,
-    num_samples: usize,
-) -> VolumeBlur<F, S> {
+) -> VolumeBlur<P, F, S> {
     VolumeBlur {
         shader,
         radius,
-        samples: num_samples,
         _marker: core::marker::PhantomData,
     }
 }

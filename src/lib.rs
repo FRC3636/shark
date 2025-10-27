@@ -1,7 +1,8 @@
 #![cfg_attr(not(feature = "std"), no_std)]
-#![feature(generic_const_exprs)]
+#![feature(generic_const_exprs, test)]
 
 extern crate alloc;
+extern crate test;
 
 pub mod point;
 pub mod shader;
