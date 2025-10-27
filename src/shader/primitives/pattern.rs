@@ -4,7 +4,7 @@ use crate::shader::{Shader, Vertex};
 
 #[derive(Debug, Clone, Copy)]
 pub struct Checkerboard<F: Vertex, S: Shader<F>, T: Shader<F>> {
-    _marker: core::marker::PhantomData<F>,
+    _marker: core::marker::PhantomData<fn(F)>,
     shaders: (S, T),
     stride: f64,
 }
@@ -17,9 +17,7 @@ impl<F: Vertex, S: Shader<F>, T: Shader<F>> Shader<F> for Checkerboard<F, S, T> 
             .pos()
             .iter()
             .map(|pos| (pos / self.stride).abs() as usize)
-            .sum::<usize>()
-            % 2
-            == 0;
+            .sum::<usize>().is_multiple_of(2);
 
         if first_color {
             self.shaders.0.shade(frag).into_color()
@@ -57,7 +55,7 @@ pub fn random() -> Random {
 
 #[derive(Debug, Clone, Copy)]
 pub struct Rainbow<F: Vertex, S: Fn(F) -> f64 + Send + Sync> {
-    _marker: core::marker::PhantomData<F>,
+    _marker: core::marker::PhantomData<fn(F)>,
     selector: S,
 }
 impl<F: Vertex, S: Fn(F) -> f64 + Send + Sync> Shader<F> for Rainbow<F, S> {

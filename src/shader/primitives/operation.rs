@@ -2,7 +2,7 @@ use num::ToPrimitive;
 use palette::{FromColor, Hsl, IntoColor, LinSrgb, Mix, ShiftHue};
 
 use crate::shader::{Shader, Vertex, VertexDim};
-use alloc::{fmt::Debug, boxed::Box, vec::Vec};
+use alloc::{boxed::Box, fmt::Debug, vec::Vec};
 
 pub struct Interpolate<S: Shader<F>, E: Shader<F>, F: Vertex> {
     start: S,
@@ -44,7 +44,7 @@ pub fn mix<F: Vertex, S: Shader<F>, E: Shader<F>>(
 
 #[derive(Debug, Clone, Copy)]
 pub struct RotateHue<F: Vertex, S: Shader<F>> {
-    _marker: core::marker::PhantomData<F>,
+    _marker: core::marker::PhantomData<fn(F)>,
     shader: S,
     angle: f64,
 }
@@ -102,7 +102,7 @@ pub fn time_gradient<
 
 #[derive(Debug, Clone, Copy)]
 pub struct ModPosition<S: Shader<F>, M: ToPrimitive, F: Vertex> {
-    _marker: core::marker::PhantomData<F>,
+    _marker: core::marker::PhantomData<fn(F)>,
     shader: S,
     modulo: M,
 }
@@ -134,7 +134,7 @@ pub fn mod_position<F: Vertex, S: Shader<F>, M: ToPrimitive>(
 
 #[derive(Debug, Clone, Copy)]
 pub struct ModTime<F: Vertex, S: Shader<F>, M: ToPrimitive> {
-    _marker: core::marker::PhantomData<F>,
+    _marker: core::marker::PhantomData<fn(F)>,
     shader: S,
     modulo: M,
 }
@@ -163,7 +163,7 @@ pub fn mod_time<F: Vertex, S: Shader<F>, M: ToPrimitive>(shader: S, modulo: M) -
 
 #[derive(Debug, Clone, Copy)]
 pub struct Extrude<const D: usize, F: Vertex, S: Shader<F>> {
-    _marker: core::marker::PhantomData<F>,
+    _marker: core::marker::PhantomData<fn(F)>,
     shader: S,
 }
 
@@ -191,7 +191,7 @@ pub fn extrude<const D: usize, F: Vertex, S: Shader<F>>(shader: S) -> Extrude<D,
 
 #[derive(Debug, Clone, Copy)]
 pub struct ScaleTime<F: Vertex, S: Shader<F>> {
-    _marker: core::marker::PhantomData<F>,
+    _marker: core::marker::PhantomData<fn(F)>,
     shader: S,
     scale: f64,
 }
@@ -215,7 +215,7 @@ pub fn scale_time<F: Vertex, S: Shader<F>>(shader: S, scale: f64) -> ScaleTime<F
 
 #[derive(Debug, Clone, Copy)]
 pub struct ScalePosition<F: Vertex, S: Shader<F>> {
-    _marker: core::marker::PhantomData<F>,
+    _marker: core::marker::PhantomData<fn(F)>,
     shader: S,
     scale: f64,
 }
@@ -242,7 +242,7 @@ pub fn scale_position<F: Vertex, S: Shader<F>>(shader: S, scale: f64) -> ScalePo
 
 #[derive(Debug, Clone, Copy)]
 pub struct TranslatePosition<F: Vertex, S: Shader<F>, O> {
-    _marker: core::marker::PhantomData<F>,
+    _marker: core::marker::PhantomData<fn(F)>,
     shader: S,
     offset: O,
 }
@@ -273,7 +273,7 @@ macro_rules! simple_op_combinator {
     ($name:ident, $func_name:ident = $op:tt) => {
         #[derive(Debug, Clone, Copy)]
         pub struct $name<L: Shader<F>, R: Shader<F>, F: Vertex> {
-            _marker: core::marker::PhantomData<F>,
+            _marker: core::marker::PhantomData<fn(F)>,
             left: L,
             right: R,
         }
@@ -311,7 +311,7 @@ pub struct VolumeBlur<F: Vertex, S: Shader<F>> {
     shader: S,
     radius: f64,
     samples: usize,
-    _marker: core::marker::PhantomData<F>,
+    _marker: core::marker::PhantomData<fn(F)>,
 }
 impl<V: Vertex, S: Shader<V>> Shader<V> for VolumeBlur<V, S>
 where

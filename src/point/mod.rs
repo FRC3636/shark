@@ -69,11 +69,14 @@ impl core::ops::Mul<Point> for f64 {
 
 #[cfg(test)]
 pub mod tests {
+    use super::Point;
+    use alloc::vec::Vec;
+
     #[test]
     fn from_iterator() {
-        let points = crate::point::primitives::Line::new(
-            crate::point::Point::default(),
-            crate::point::Point {
+        let points = super::primitives::Line::new(
+            Point::default(),
+            Point {
                 x: 1.0,
                 y: 1.0,
                 z: 1.0,

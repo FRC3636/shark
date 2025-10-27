@@ -231,6 +231,6 @@ mod tests {
     fn fn_shaders() {
         let shader = (|_: FragOne| Srgb::new(0.0, 1.0, 0.0)).into_shader();
 
-        shader.shade(FragOne { pos: 0, time: 0.0 });
+        shader.shade(FragOne { pos: [0.0], time: 0.0 });
     }
 }
