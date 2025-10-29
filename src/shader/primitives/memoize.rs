@@ -1,17 +1,19 @@
-use core::sync::atomic::AtomicU64;
+use core::{num::NonZero, sync::atomic::AtomicU64};
 use std::{collections::BTreeMap, sync::RwLock};
 
-use crate::shader::{Shader, VertexDim};
+use kiddo::{KdTree, SquaredEuclidean};
 
-type OrderedFloat = ordered_float::OrderedFloat<f64>;
+use crate::shader::{Shader, VertexDim};
 
 #[derive(Debug)]
 pub struct Memoize<const D: usize, F: VertexDim<D>, S: Shader<F>> {
     shader: S,
-    cache: RwLock<BTreeMap<[OrderedFloat; D], S::Output>>,
+    cache: RwLock<BTreeMap<u64, S::Output>>,
+    kd_tree: RwLock<KdTree<f64, D>>,
     threshold: Option<f64>,
     time_invalidates: bool,
     cached_time: AtomicU64,
+    item_counter: AtomicU64,
 }
 impl<const D: usize, F: VertexDim<D>, S: Shader<F>> Memoize<D, F, S>
 where
@@ -19,22 +21,29 @@ where
 {
     fn invalidate(&self) {
         self.cache.write().unwrap().clear();
+        let mut kd_tree = self.kd_tree.write().unwrap();
+        *kd_tree = KdTree::new();
+
+        self.item_counter
+            .store(0, core::sync::atomic::Ordering::Relaxed);
     }
 
-    fn get(&self, key: [OrderedFloat; D]) -> Option<S::Output> {
+    fn get(&self, key: [f64; D]) -> Option<S::Output> {
         let cache = self.cache.read().unwrap();
-        let key = cache.keys().find(|k| {
-            k.iter()
-                .zip(key.iter())
-                .map(|(a, b)| (a - b).powi(2))
-                .sum::<f64>()
-                .sqrt()
-                < self.threshold.unwrap_or(0.0)
-        });
-        key.map(|k| (*cache.get(k).unwrap()).clone())
+        let kd_tree = self.kd_tree.read().unwrap();
+
+        let threshold = match self.threshold {
+            Some(t) => t,
+            None => f64::EPSILON,
+        };
+        let &nearest_neighbor = kd_tree
+            .nearest_n_within::<SquaredEuclidean>(&key, threshold, NonZero::new(1).unwrap(), false)
+            .first()?;
+
+        Some(cache.get(&nearest_neighbor.item).unwrap().clone())
     }
 
-    fn get_or_shade(&self, frag: F, key: [OrderedFloat; D]) -> S::Output {
+    fn get_or_shade(&self, frag: F, key: [f64; D]) -> S::Output {
         if self.time_invalidates
             && self.cached_time.load(core::sync::atomic::Ordering::Relaxed) != frag.time().to_bits()
         {
@@ -46,7 +55,13 @@ where
         }
 
         let color = self.shader.shade(frag);
-        self.cache.write().unwrap().insert(key, color.clone());
+
+        let item = self
+            .item_counter
+            .fetch_add(1, core::sync::atomic::Ordering::AcqRel);
+
+        self.cache.write().unwrap().insert(item, color.clone());
+        self.kd_tree.write().unwrap().add(&key, item);
         color
     }
 }
@@ -59,10 +74,8 @@ where
 
     fn shade(&self, frag: F) -> Self::Output {
         let pos = frag.pos();
-        let mut key = [ordered_float::OrderedFloat(0.0); D];
-        for i in 0..D {
-            key[i] = pos[i].into();
-        }
+        let mut key = [0.0; D];
+        key.copy_from_slice(&pos[0..D]);
 
         self.get_or_shade(frag, key)
     }
@@ -77,7 +90,9 @@ pub fn memoize<const D: usize, F: VertexDim<D>, S: Shader<F>>(
         shader,
         threshold: distance_threshold,
         time_invalidates,
+        kd_tree: RwLock::new(KdTree::new()),
         cache: RwLock::new(BTreeMap::new()),
         cached_time: AtomicU64::new(0),
+        item_counter: AtomicU64::new(0),
     }
 }

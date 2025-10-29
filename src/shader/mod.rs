@@ -257,7 +257,7 @@ mod tests {
             shader.shade(FragOne {
                 pos: [42.0],
                 time: 0.0,
-            });
+            })
         });
     }
 
@@ -274,7 +274,7 @@ mod tests {
             shader.shade(FragOne {
                 pos: [42.0],
                 time: 0.0,
-            });
+            })
         });
     }
 
@@ -286,10 +286,11 @@ mod tests {
             shader.shade(FragOne {
                 pos: [42.0],
                 time: 0.0,
-            });
+            })
         });
     }
 
+    #[cfg(feature = "memoize")]
     #[bench]
     fn bench_volume_blur_memoized(b: &mut test::Bencher) {
         use crate::shader::{DimShaderExt, ShaderExt};
@@ -300,7 +301,7 @@ mod tests {
             shader.shade(FragOne {
                 pos: [42.0],
                 time: 0.0,
-            });
+            })
         });
     }
 }
