@@ -17,7 +17,8 @@ impl<F: Vertex, S: Shader<F>, T: Shader<F>> Shader<F> for Checkerboard<F, S, T> 
             .pos()
             .iter()
             .map(|pos| (pos / self.stride).abs() as usize)
-            .sum::<usize>().is_multiple_of(2);
+            .sum::<usize>()
+            .is_multiple_of(2);
 
         if first_color {
             self.shaders.0.shade(frag).into_color()
@@ -39,18 +40,36 @@ pub fn checkerboard<F: Vertex, S: Shader<F>, T: Shader<F>>(
     }
 }
 
-#[derive(Debug, Clone, Copy)]
-pub struct Random;
+#[derive(Debug)]
+pub struct Random {
+    seed: portable_atomic::AtomicU64,
+}
 impl<F: Vertex> Shader<F> for Random {
     type Output = LinSrgb<f64>;
 
     fn shade(&self, _frag: F) -> Self::Output {
-        Srgb::new(fastrand::f64(), fastrand::f64(), fastrand::f64()).into_color()
+        let mut rng = fastrand::Rng::with_seed(self.seed.load(portable_atomic::Ordering::Relaxed));
+        let color = Srgb::new(rng.f64(), rng.f64(), rng.f64()).into_color();
+        let new_seed = rng.get_seed();
+        self.seed
+            .store(new_seed, portable_atomic::Ordering::Relaxed);
+        color
+    }
+}
+impl Clone for Random {
+    fn clone(&self) -> Self {
+        Random {
+            seed: portable_atomic::AtomicU64::new(
+                self.seed.load(portable_atomic::Ordering::Relaxed),
+            ),
+        }
     }
 }
 
 pub fn random() -> Random {
-    Random
+    Random {
+        seed: portable_atomic::AtomicU64::new(0xdeadbeef),
+    }
 }
 
 #[derive(Debug, Clone, Copy)]
@@ -67,9 +86,7 @@ impl<F: Vertex, S: Fn(F) -> f64 + Send + Sync> Shader<F> for Rainbow<F, S> {
     }
 }
 
-pub fn rainbow<F: Vertex, S: Fn(F) -> f64 + Send + Sync>(
-    selector: S,
-) -> Rainbow<F, S> {
+pub fn rainbow<F: Vertex, S: Fn(F) -> f64 + Send + Sync>(selector: S) -> Rainbow<F, S> {
     Rainbow {
         _marker: core::marker::PhantomData,
         selector,

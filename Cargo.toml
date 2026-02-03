@@ -9,14 +9,16 @@ crate-type = ["cdylib", "rlib"]
 # See more keys and their definitions at https://doc.rust-lang.org/cargo/reference/manifest.html
 
 [dependencies]
-num = "0.4.1"
-palette = "0.7.3"
-fastrand = { version = "2.0.1" }
+num = { version = "0.4.1", default-features = false }
+palette = { version = "0.7.3", default-features = false }
+fastrand = { version = "2.0.1", default-features = true }
 kiddo = { version = "5.2.2", optional = true }
+portable-atomic = "1.13.1"
 
 [features]
-default = []
+default = ["std"]
 
 memoize = ["alloc", "std", "dep:kiddo"]
-alloc = []
-std = []
+alloc = ["fastrand/alloc", "palette/alloc"]
+std = ["fastrand/std", "num/std", "palette/std", "portable-atomic/std"]
+libm = ["palette/libm"]
