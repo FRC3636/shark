@@ -71,6 +71,11 @@ pub fn random() -> Random {
         seed: portable_atomic::AtomicU64::new(0xdeadbeef),
     }
 }
+pub fn random_with_seed(seed: u64) -> Random {
+    Random {
+        seed: portable_atomic::AtomicU64::new(seed),
+    }
+}
 
 #[derive(Debug, Clone, Copy)]
 pub struct Rainbow<F: Vertex, S: Fn(F) -> f64 + Send + Sync> {
