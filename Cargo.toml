@@ -11,7 +11,7 @@ crate-type = ["cdylib", "rlib"]
 [dependencies]
 num = { version = "0.4.1", default-features = false }
 palette = { version = "0.7.3", default-features = false }
-fastrand = { version = "2.0.1", default-features = true }
+fastrand = { version = "2.0.1", default-features = false }
 kiddo = { version = "5.2.2", optional = true }
 portable-atomic = "1.13.1"
 

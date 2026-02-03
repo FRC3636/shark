@@ -2,6 +2,7 @@ use num::ToPrimitive;
 use palette::{FromColor, Hsl, IntoColor, LinSrgb, Mix, ShiftHue};
 
 use crate::shader::{Shader, Vertex, VertexDim};
+#[cfg(feature = "alloc")]
 use alloc::{boxed::Box, fmt::Debug};
 
 pub struct Interpolate<S: Shader<F>, E: Shader<F>, F: Vertex> {
@@ -21,6 +22,8 @@ impl<S: Shader<F>, E: Shader<F>, F: Vertex> Shader<F> for Interpolate<S, E, F> {
         start.mix(end, factor)
     }
 }
+
+#[cfg(feature = "alloc")]
 impl<S: Shader<F> + Debug, E: Shader<F> + Debug, F: Vertex + Debug> Debug for Interpolate<S, E, F> {
     fn fmt(&self, f: &mut core::fmt::Formatter<'_>) -> core::fmt::Result {
         f.debug_struct("Interpolate")

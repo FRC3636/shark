@@ -67,7 +67,7 @@ impl core::ops::Mul<Point> for f64 {
     }
 }
 
-#[cfg(test)]
+#[cfg(all(test, feature = "alloc"))]
 pub mod tests {
     use super::Point;
     use alloc::vec::Vec;

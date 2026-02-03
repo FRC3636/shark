@@ -249,6 +249,7 @@ mod tests {
         });
     }
 
+    #[cfg(feature = "std")]
     #[bench]
     fn bench_rainbow_shader(b: &mut test::Bencher) {
         let shader = crate::shader::primitives::rainbow(|frag: FragOne| frag.pos[0]);
@@ -278,6 +279,7 @@ mod tests {
         });
     }
 
+    #[cfg(feature = "std")]
     #[bench]
     fn bench_volume_blur(b: &mut test::Bencher) {
         use crate::shader::ShaderExt;
